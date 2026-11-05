@@ -1,0 +1,326 @@
+{
+  "id": "ch6",
+  "number": "06",
+  "title": "Linux 裝置驅動",
+  "subtitle": "跨過系統呼叫，理解硬體如何被存取。",
+  "summary": "串起核心模組、裝置節點、file_operations 與使用者空間測試。",
+  "sources": [
+    {
+      "file": "Lecture6_Embedded_Linux-Device-Driver.pdf",
+      "title": "Lecture 6 · Embedded Linux 裝置驅動",
+      "pages": 59
+    },
+    {
+      "file": "Lab6/Lab6驅動程式模組編寫實習_V2.pdf",
+      "title": "Lab 6 · 驅動程式模組編寫",
+      "pages": 14
+    }
+  ],
+  "sections": [
+    {
+      "id": "ch6-s1",
+      "title": "驅動、核心與使用者空間",
+      "level": 2,
+      "importance": 3,
+      "connectionLevel": 3,
+      "connections": [
+        {
+          "target": "",
+          "label": "整合應用",
+          "reason": "回看 GPIO、SPI 與相機，辨認應用和驅動各自負責的工作。"
+        }
+      ],
+      "sourceRefs": [
+        {
+          "file": "Lecture6_Embedded_Linux-Device-Driver.pdf",
+          "pages": "4–11、21–22、31–33"
+        }
+      ],
+      "intro": "驅動提供標準操作介面，讓應用不用直接處理所有硬體細節。",
+      "points": [
+        {
+          "term": "User Space",
+          "text": "應用在使用者模式執行，不能任意執行特權 I/O 指令。"
+        },
+        {
+          "term": "Kernel Space",
+          "text": "核心具較高權限，管理程序、記憶體、檔案、裝置與網路。核心模組載入後在核心空間運作。"
+        },
+        {
+          "term": "系統呼叫",
+          "text": "應用提出 open、read、write 等請求，經模式切換由核心處理，再將結果回傳。"
+        }
+      ],
+      "table": {
+        "headers": [
+          "裝置類別",
+          "資料觀念",
+          "例子"
+        ],
+        "rows": [
+          [
+            "字元裝置",
+            "以位元組串流存取",
+            "序列埠"
+          ],
+          [
+            "區塊裝置",
+            "以資料區塊存取",
+            "磁碟"
+          ],
+          [
+            "網路介面",
+            "透過網路堆疊處理封包",
+            "乙太網卡、loopback"
+          ]
+        ]
+      },
+      "diagram": "driver",
+      "pitfall": "字元裝置的串流觀念，不表示每次 read 或 write 只能傳 1 byte。",
+      "questions": [
+        {
+          "level": 1,
+          "prompt": "驅動位於應用與硬體之間，主要提供什麼價值？",
+          "answer": "把硬體操作封裝成標準介面，讓應用透過核心提供的操作存取裝置。"
+        },
+        {
+          "level": 2,
+          "prompt": "使用者程式呼叫 write() 時，為何需要進入核心？",
+          "answer": "裝置操作由核心管理；系統呼叫會切換至核心模式，讓核心及對應驅動處理，再回傳結果。"
+        },
+        {
+          "level": 2,
+          "prompt": "字元、區塊與網路裝置的資料存取觀念有何差異？",
+          "answer": "字元裝置重視位元組串流；區塊裝置以區塊資料操作；網路介面則透過網路堆疊處理封包。"
+        }
+      ]
+    },
+    {
+      "id": "ch6-s2",
+      "title": "核心模組的編譯與生命週期",
+      "level": 3,
+      "importance": 3,
+      "connectionLevel": 3,
+      "connections": [
+        {
+          "target": "",
+          "label": "字元驅動實作",
+          "reason": "先確認模組能正確載入與卸載，再增加裝置服務。"
+        }
+      ],
+      "sourceRefs": [
+        {
+          "file": "Lecture6_Embedded_Linux-Device-Driver.pdf",
+          "pages": "12–30"
+        },
+        {
+          "file": "Lab6/Lab6驅動程式模組編寫實習_V2.pdf",
+          "pages": "11–14"
+        }
+      ],
+      "intro": "核心模組不是一般執行檔；建置時要對準目標系統的核心。",
+      "points": [
+        {
+          "term": "建置條件",
+          "text": "確認目前核心版本、對應 headers／建置目錄與平台架構。TX2 與 x86 VM 要各自編譯，不能直接共用同一份 .ko。"
+        },
+        {
+          "term": "Makefile",
+          "text": "obj-m 指定模組物件名稱，核心目錄指向目標 headers。Lab 6 補充在 VM 無法 make 時，將舊 SUBDIRS 改用 M。"
+        },
+        {
+          "term": "進入與離開",
+          "text": "module_init 指定載入函式，module_exit 指定卸載函式；範例以 printk 記錄訊息，MODULE_LICENSE 宣告授權。"
+        },
+        {
+          "term": "驗證生命週期",
+          "text": "make 產出 .ko → insmod 載入 → lsmod 查狀態、dmesg 查訊息 → rmmod 卸載，再檢查紀錄。"
+        }
+      ],
+      "code": {
+        "caption": "hellod 範例的載入、觀察與卸載",
+        "language": "shell",
+        "text": "uname -r\nmake\nsudo insmod hellod.ko\nlsmod | grep hellod\nsudo dmesg | tail\nsudo rmmod hellod\nsudo dmesg | tail"
+      },
+      "pitfall": "講義的 kernel 路徑與 usage-count 巨集屬課堂版本；不要把固定版本路徑照搬到另一台系統。",
+      "questions": [
+        {
+          "level": 1,
+          "prompt": ".ko 是什麼？用哪兩個指令載入與卸載？",
+          "answer": "Linux 核心模組檔；insmod 載入，rmmod 卸載。"
+        },
+        {
+          "level": 2,
+          "prompt": "為何 insmod 成功後，終端機沒有直接出現 printk 訊息？",
+          "answer": "printk 寫入核心訊息紀錄；應使用 dmesg 等方式查看，而非把它當一般程式的標準輸出。"
+        },
+        {
+          "level": 3,
+          "prompt": "VM 能 make，但 TX2 無法載入同一個 .ko，優先檢查什麼？",
+          "answer": "模組是否為 TX2 架構編譯、是否匹配 TX2 正在執行的核心與 headers；應在相符的目標建置環境重編譯並查 dmesg。"
+        }
+      ]
+    },
+    {
+      "id": "ch6-s3",
+      "title": "字元裝置節點與操作對應",
+      "level": 3,
+      "importance": 3,
+      "connectionLevel": 3,
+      "connections": [
+        {
+          "target": "",
+          "label": "應用控制周邊",
+          "reason": "應用的檔案操作會被轉交給驅動註冊的處理函式。"
+        }
+      ],
+      "sourceRefs": [
+        {
+          "file": "Lecture6_Embedded_Linux-Device-Driver.pdf",
+          "pages": "34–45、49–51、58"
+        }
+      ],
+      "intro": "裝置節點負責連到驅動；file_operations 決定每種操作由誰處理。",
+      "points": [
+        {
+          "term": "裝置節點",
+          "text": "課堂例：sudo mknod /dev/demo c 60 0。c 表示字元裝置，60 是 major，0 是 minor；不是軟體版本號。"
+        },
+        {
+          "term": "註冊與取消",
+          "text": "register_chrdev 將主要裝置編號與操作表註冊至核心；移除模組時須取消註冊並釋放資源。"
+        },
+        {
+          "term": "操作表",
+          "text": "struct file_operations 對應 open、read、write、unlocked_ioctl、release 等服務；使用者操作會觸發相應函式。"
+        },
+        {
+          "term": "開啟與關閉",
+          "text": "open 初始化資源與狀態；release 釋放資源。若裝置限制單一使用者，可在驅動中加入使用狀態或同步控制。"
+        }
+      ],
+      "table": {
+        "headers": [
+          "應用需求",
+          "驅動操作"
+        ],
+        "rows": [
+          [
+            "開啟 /dev/demo",
+            "open"
+          ],
+          [
+            "讀取／寫入資料",
+            "read／write"
+          ],
+          [
+            "特殊控制命令",
+            "unlocked_ioctl"
+          ],
+          [
+            "結束使用裝置",
+            "release"
+          ]
+        ]
+      },
+      "pitfall": "只建立 /dev/demo 不會自動產生驅動；node 的裝置編號要與核心註冊一致，課堂固定 major 也須避免衝突。",
+      "questions": [
+        {
+          "level": 1,
+          "prompt": "mknod /dev/demo c 60 0 的 c、60、0 各代表什麼？",
+          "answer": "字元裝置、主要裝置編號 major=60、次要裝置編號 minor=0。"
+        },
+        {
+          "level": 2,
+          "prompt": "只有 /dev/demo 節點，但模組沒有註冊操作，能正常控制裝置嗎？",
+          "answer": "不能。節點只是入口，仍需對應的已註冊驅動及操作處理函式。"
+        },
+        {
+          "level": 3,
+          "prompt": "file_operations 如何把使用者的 write() 連到自訂程式？",
+          "answer": "驅動把 write 成員對應到自己的處理函式，並將操作表註冊給核心；核心收到該裝置的寫入請求後呼叫此函式。"
+        }
+      ]
+    },
+    {
+      "id": "ch6-s4",
+      "title": "跨空間資料傳遞與 Lab 6 驗證",
+      "level": 3,
+      "importance": 3,
+      "connectionLevel": 3,
+      "connections": [
+        {
+          "target": "",
+          "label": "全課整合",
+          "reason": "用應用 → 核心介面 → 驅動 → 硬體的路徑，重新解釋先前所有周邊控制。"
+        }
+      ],
+      "sourceRefs": [
+        {
+          "file": "Lecture6_Embedded_Linux-Device-Driver.pdf",
+          "pages": "46–57"
+        },
+        {
+          "file": "Lab6/Lab6驅動程式模組編寫實習_V2.pdf",
+          "pages": "11–14"
+        }
+      ],
+      "intro": "測試不只看模組載入，還要確認操作、資料與清理確實發生。",
+      "points": [
+        {
+          "term": "資料邊界",
+          "text": "驅動收到的使用者緩衝區不能當核心陣列直接任意存取；講義以 raw_copy_from_user 示範寫入時複製資料。"
+        },
+        {
+          "term": "長度與狀態",
+          "text": "read／write 的 count 表示請求大小；複製前須考慮緩衝區容量。課堂以 iCount 觀察多次操作之間的模組狀態。"
+        },
+        {
+          "term": "測試路徑",
+          "text": "載入 demo.ko 後，以測試程式或 shell 寫入 /dev/demo；多次執行並查看 dmesg，確認操作函式、內容與計數變化。"
+        },
+        {
+          "term": "Lab 6 任務",
+          "text": "簡易模組要在 VM 與 TX2 各自編譯、載入並查核心訊息；字元驅動在 VM 完成開發與測試。"
+        }
+      ],
+      "code": {
+        "caption": "課堂字元裝置測試流程；先完成 node 與驅動註冊",
+        "language": "shell",
+        "text": "sudo insmod demo.ko\nprintf 'test123' | sudo tee /dev/demo > /dev/null\nsudo dmesg | tail\nsudo rmmod demo"
+      },
+      "pitfall": "教材的資料複製範例與 API 依核心版本而定；核心緩衝區仍需容量檢查，不能直接照抄任意 count。",
+      "questions": [
+        {
+          "level": 1,
+          "prompt": "Lab 6 的簡易模組與字元驅動各需在哪些平台驗證？",
+          "answer": "簡易模組在 VM 與 TX2；字元驅動在 VM。都要查看核心訊息確認結果。"
+        },
+        {
+          "level": 2,
+          "prompt": "為何不能直接把驅動 write() 收到的 buf 當核心陣列使用？",
+          "answer": "buf 指向使用者空間，跨空間存取需使用適當資料複製機制，並檢查長度、結果與緩衝區容量。"
+        },
+        {
+          "level": 3,
+          "prompt": "連續執行測試程式時 iCount 增加，說明了什麼？卸載後重載又如何？",
+          "answer": "模組在已載入期間保有自己的狀態，多次服務可更新同一變數；卸載後再載入會重新初始化，依初始化設定重設狀態。"
+        }
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "prompt": "能在紙上寫出 .c → .ko → insmod → 測試 → rmmod，並說明每一步的證據嗎？",
+      "answer": "以目標核心建置環境 make 產生 .ko；insmod 後以 lsmod 與 dmesg 確認；觸發操作並查資料或計數紀錄；rmmod 後確認模組清單與卸載訊息。"
+    },
+    {
+      "prompt": "能從 /dev/demo 一路追到驅動 write 函式嗎？",
+      "answer": "/dev/demo 的 major/minor 連到已註冊裝置；核心查找對應的 file_operations，將寫入請求交給驅動的 write 處理函式。"
+    },
+    {
+      "prompt": "能指出一般 C 程式與核心驅動至少三個重要差異嗎？",
+      "answer": "執行空間與權限不同；建置依賴目標核心與架構；入口／出口由 module_init／module_exit 設定；訊息常用 printk 與 dmesg；使用者資料須跨空間複製。"
+    }
+  ]
+}

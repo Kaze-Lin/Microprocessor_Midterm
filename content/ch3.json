@@ -1,0 +1,316 @@
+{
+  "id": "ch3",
+  "number": "03",
+  "title": "Qt 與事件驅動介面",
+  "subtitle": "把使用者操作轉成可預期的 LED 行為",
+  "summary": "掌握 Widget、Signal / Slot、QTimer 與部署流程；用狀態管理串起畫面、快捷鍵及 GPIO。",
+  "sources": [
+    {
+      "file": "Lecture3_Qt2026.pdf",
+      "title": "Lecture 3 · Qt 視窗程式開發",
+      "pages": 51
+    },
+    {
+      "file": "Lab3/Lab3_QT_Creator2026_v3.pdf",
+      "title": "Lab 3 · Qt Creator 與 LED 控制",
+      "pages": 48
+    }
+  ],
+  "sections": [
+    {
+      "id": "ch3-s1",
+      "title": "Widget、Layout 與物件樹",
+      "level": 1,
+      "importance": 2,
+      "connectionLevel": 2,
+      "connections": [
+        {
+          "target": "ch4",
+          "label": "控制介面",
+          "reason": "理解畫面元件與控制邏輯分工，能延伸到遠端控制頁面。"
+        }
+      ],
+      "sourceRefs": [
+        {
+          "file": "Lecture3_Qt2026.pdf",
+          "pages": "6–17、24–45"
+        },
+        {
+          "file": "Lab3/Lab3_QT_Creator2026_v3.pdf",
+          "pages": "17–19、26–27"
+        }
+      ],
+      "intro": "Qt 是 C++ 應用程式框架；Qt Creator 則是開發與設計介面的 IDE。",
+      "points": [
+        {
+          "term": "Widget",
+          "text": "QObject → QWidget → 按鈕、標籤、視窗等元件；QMainWindow 提供選單、工具列、中央工作區與狀態列。"
+        },
+        {
+          "term": "Layout",
+          "text": "QHBoxLayout 橫排、QVBoxLayout 直排、QGridLayout 網格、QFormLayout 表單；用版面管理元件排列。"
+        },
+        {
+          "term": "物件樹",
+          "text": "建立 QObject 時指定 Parent，父物件銷毀時會清理其子物件；未建立父子關係的物件要另行管理生命週期。"
+        },
+        {
+          "term": "專案檔案",
+          "text": ".ui 存介面配置，.h 宣告類別，.cpp 實作行為；Qt 的 MOC 為 Q_OBJECT 等元物件功能產生 C++ 程式碼。"
+        }
+      ],
+      "pitfall": "objectName 是程式辨識物件的名稱；按鈕顯示的 text 是畫面文字，兩者用途不同。",
+      "questions": [
+        {
+          "level": 1,
+          "prompt": "Qt 與 Qt Creator 的差別？",
+          "answer": "Qt 是應用程式框架與函式庫；Qt Creator 是用來編輯、設計、建置和除錯的 IDE。"
+        },
+        {
+          "level": 2,
+          "prompt": "父物件銷毀後，有指定 Parent 的子物件通常如何處理？",
+          "answer": "會隨父物件被刪除；物件樹協助管理生命週期。"
+        }
+      ],
+      "table": {
+        "headers": [
+          "元件",
+          "Lab 3 用途"
+        ],
+        "rows": [
+          [
+            "QPushButton / QCheckBox",
+            "觸發動作／選擇 LED"
+          ],
+          [
+            "QSlider / QSpinBox",
+            "調整速度數值"
+          ],
+          [
+            "QProgressBar / QLabel",
+            "呈現速度／燈泡圖片與分數"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "ch3-s2",
+      "title": "Signal / Slot：事件如何傳遞",
+      "level": 2,
+      "importance": 3,
+      "connectionLevel": 3,
+      "connections": [
+        {
+          "target": "ch4",
+          "label": "遠端控制事件",
+          "reason": "按鈕操作與遠端訊息都可理解為事件觸發處理流程。"
+        }
+      ],
+      "sourceRefs": [
+        {
+          "file": "Lecture3_Qt2026.pdf",
+          "pages": "18–21、35–44"
+        },
+        {
+          "file": "Lab3/Lab3_QT_Creator2026_v3.pdf",
+          "pages": "20–23"
+        }
+      ],
+      "intro": "Signal 表示事件發生，Slot 是接到事件後要執行的函式。",
+      "points": [
+        {
+          "term": "連線模型",
+          "text": "QObject::connect 把 Sender 的 Signal 接到 Receiver 的 Slot；按鈕 clicked() 可以觸發槽來更新 Label 或 GPIO。"
+        },
+        {
+          "term": "多對多",
+          "text": "一個 Signal 可連接多個 Slot，多個 Signal 也能接同一個 Slot；發送者不需知道接收者內部如何實作。"
+        },
+        {
+          "term": "資料與型別",
+          "text": "Signal 的資料要能對應 Slot 參數；以函式指標語法連線可在編譯時檢查許多型別錯誤。"
+        },
+        {
+          "term": "同步元件",
+          "text": "把 slider 的 valueChanged(int) 接到 spin box / progress bar 的 setValue(int)；快捷鍵則提供同一控制動作的另一個入口。"
+        }
+      ],
+      "pitfall": "只把數值畫在 ProgressBar 上，不會自動改變實體 LED；硬體控制仍須在處理函式中實作。",
+      "questions": [
+        {
+          "level": 1,
+          "prompt": "clicked() 與 setText() 分別是事件通知還是處理動作？",
+          "answer": "clicked() 是 Signal；setText() 是更新文字的動作，可作為接收端 Slot 使用。"
+        },
+        {
+          "level": 2,
+          "prompt": "為什麼一個 Slider 可以同時更新 SpinBox 與 ProgressBar？",
+          "answer": "同一個 valueChanged(int) Signal 可連接兩個接收端的 setValue(int)。"
+        },
+        {
+          "level": 3,
+          "prompt": "按下按鈕後畫面正確更新，但 LED 沒反應，應檢查哪個連結？",
+          "answer": "確認槽除了改畫面，也有呼叫 GPIO 控制；再檢查 GPIO 編號、方向、接線與權限。"
+        }
+      ],
+      "diagram": "qt",
+      "code": {
+        "caption": "型別可檢查的 connect 示意",
+        "language": "cpp",
+        "text": "connect(ui->slider, &QSlider::valueChanged,\n        ui->spinBox, &QSpinBox::setValue);\nconnect(ui->slider, &QSlider::valueChanged,\n        ui->progressBar, &QProgressBar::setValue);"
+      }
+    },
+    {
+      "id": "ch3-s3",
+      "title": "QTimer 與 LED 狀態管理",
+      "level": 2,
+      "importance": 3,
+      "connectionLevel": 3,
+      "connections": [
+        {
+          "target": "ch4",
+          "label": "多端同步",
+          "reason": "把狀態更新與畫面輸出分清楚，才能讓多個控制端顯示一致。"
+        },
+        {
+          "target": "ch5",
+          "label": "週邊顯示",
+          "reason": "定時更新的思路可延伸到 SPI 顯示或感測資料更新。"
+        }
+      ],
+      "sourceRefs": [
+        {
+          "file": "Lab3/Lab3_QT_Creator2026_v3.pdf",
+          "pages": "11–15、24–28、37–41"
+        }
+      ],
+      "intro": "用定時事件推進狀態，讓 LED、圖示與操作介面保持一致。",
+      "points": [
+        {
+          "term": "QTimer",
+          "text": "啟動計時器後，timeout() 週期觸發槽；每次只更新一次狀態，適合閃爍與流水燈。"
+        },
+        {
+          "term": "狀態變數",
+          "text": "分開記錄啟動／停止、目前 LED 索引、方向、速度與閃爍次數；停止時應停止計時並清理燈號。"
+        },
+        {
+          "term": "Lab 3 基本要求",
+          "text": "四顆 LED 選擇與圖示、閃爍、可反向流水燈；Slider / SpinBox / ProgressBar 的 1–100% 速度連動，以及快捷鍵。"
+        },
+        {
+          "term": "進階 QTE",
+          "text": "隨機亮燈後判斷按鍵；成功加 20 分，100 分過關；失敗歸零並結束該回合。畫面與實體 LED 應反映同一狀態。"
+        }
+      ],
+      "pitfall": "在 GUI 事件處理中長時間迴圈或 sleep 會卡住介面；QTimer 也不是即時系統，timeout 的處理仍需保持短小。",
+      "questions": [
+        {
+          "level": 1,
+          "prompt": "QTimer 的哪個 Signal 用來週期性更新 LED？",
+          "answer": "timeout()。"
+        },
+        {
+          "level": 2,
+          "prompt": "按下 Change Direction 時，應重建視窗還是修改狀態？",
+          "answer": "修改方向狀態，後續 timeout 依新方向推進 LED 索引；通常不需重建視窗。"
+        },
+        {
+          "level": 3,
+          "prompt": "把閃爍寫成無限 while 迴圈加 sleep，為何可能連停止鍵都無法按？",
+          "answer": "GUI 執行緒被迴圈占住，事件迴圈無法及時處理按鈕與重繪；應用定時事件逐步更新。"
+        }
+      ],
+      "code": {
+        "caption": "觀念示例：每次 timeout 只做一步",
+        "language": "cpp",
+        "text": "connect(timer, &QTimer::timeout, this, [this] {\n    ledOn = !ledOn;\n    updateGpio(ledOn);   // 自行實作的 GPIO 更新\n    updateView(ledOn);   // 自行實作的畫面更新\n});\ntimer->start(intervalMs);"
+      }
+    },
+    {
+      "id": "ch3-s4",
+      "title": "qmake、make 與 TX2 部署",
+      "level": 2,
+      "importance": 3,
+      "connectionLevel": 2,
+      "connections": [
+        {
+          "target": "ch4",
+          "label": "從本機到網路",
+          "reason": "先完成本機 GUI 與硬體驗證，再加入遠端網路控制。"
+        },
+        {
+          "target": "ch6",
+          "label": "分層除錯",
+          "reason": "把介面錯誤、權限錯誤與驅動問題分開定位。"
+        }
+      ],
+      "sourceRefs": [
+        {
+          "file": "Lecture3_Qt2026.pdf",
+          "pages": "47–51"
+        },
+        {
+          "file": "Lab3/Lab3_QT_Creator2026_v3.pdf",
+          "pages": "29–34、42–48"
+        }
+      ],
+      "intro": "跨平台原始碼仍要配合目標平台的 Qt、編譯器與執行環境。",
+      "points": [
+        {
+          "term": "講義部署流程",
+          "text": "把整個 Qt 專案傳到 TX2 → ssh 登入 → 在專案目錄執行 qmake → make → 執行產出的程式。"
+        },
+        {
+          "term": "qmake 的角色",
+          "text": "依 .pro 與選定的 Qt 工具鏈產生 Makefile；make 才執行編譯與連結。"
+        },
+        {
+          "term": "Native 與 Cross",
+          "text": "講義的「把原始碼送到 TX2，再 qmake / make」是在 TX2 原生建置；真正的交叉編譯需在 Host 配好目標工具鏈與相應 Qt。"
+        },
+        {
+          "term": "常見錯誤",
+          "text": "No valid kits found 檢查 Qt 版本、qmake 與 Kit；Could not connect to display 檢查 X11 顯示環境與 ssh -Y；GPIO 權限則另外檢查。"
+        }
+      ],
+      "pitfall": "X11 顯示失敗、GPIO 權限不足與執行檔架構錯誤，是三種不同問題；不要把全部錯誤都歸因於 Qt Creator。",
+      "questions": [
+        {
+          "level": 1,
+          "prompt": "qmake 與 make 的先後順序和用途？",
+          "answer": "先 qmake 依專案及工具鏈產生 Makefile，再 make 依規則建置執行檔。"
+        },
+        {
+          "level": 2,
+          "prompt": "在 TX2 上執行 qmake 和本機 g++，這是交叉編譯嗎？",
+          "answer": "這是 TX2 原生建置；程式原始碼可跨平台移植，但編譯器與執行平台相同。"
+        },
+        {
+          "level": 3,
+          "prompt": "成功編譯後出現 Could not connect to display，優先檢查什麼？",
+          "answer": "檢查是否具備可用 X11 顯示環境、SSH 是否加上 -Y，以及客戶端是否支援 X11 轉送。"
+        }
+      ],
+      "code": {
+        "caption": "在 TX2 專案目錄中原生建置",
+        "language": "sh",
+        "text": "# 先從 Host 傳送完整專案，再登入 TX2\nssh -Y nvidia@<TX2_IP>\ncd <PROJECT_DIR>\nqmake\nmake\n./<APP_NAME>"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "prompt": "我能從 clicked() 開始，說出 LED 與畫面更新的完整流程。",
+      "answer": "按鈕發出 clicked() → connect 找到槽 → 更新控制狀態 → 寫入 GPIO → 根據同一狀態更新 LED 圖示／元件。"
+    },
+    {
+      "prompt": "我能用 QTimer 解釋閃爍、流水燈反向與停止。",
+      "answer": "timeout 觸發一次狀態轉移；閃爍切換 on/off，流水燈依方向移動索引；反向修改方向，停止則停計時器並熄燈。"
+    },
+    {
+      "prompt": "我能分辨 Qt 跨平台移植與交叉編譯，並排查無法顯示視窗。",
+      "answer": "可移植是原始碼能在不同平台重建；交叉編譯是 Host 工具鏈產生給不同 Target 的程式。無視窗先查顯示環境與 ssh -Y，再分開檢查硬體權限。"
+    }
+  ]
+}

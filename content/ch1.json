@@ -1,0 +1,334 @@
+{
+  "id": "ch1",
+  "number": "01",
+  "title": "Linux 與編譯工具鏈",
+  "subtitle": "從原始碼到 TX2 上的執行檔",
+  "summary": "認清平台、權限與編譯流程，再把 Makefile、SSH、SCP 串成可重現的開發步驟。",
+  "sources": [
+    {
+      "file": "Lab0_Ubuntu編譯程式.pdf",
+      "title": "Lab 0 · Ubuntu 編譯程式",
+      "pages": 16
+    },
+    {
+      "file": "Lab01_source_code/Lab1_基礎嵌入式系統程式編譯_V4.pdf",
+      "title": "Lab 1 · 基礎嵌入式系統程式編譯",
+      "pages": 27
+    },
+    {
+      "file": "Lecture1_微算機實習_嵌入式系統開發平台安裝建置_2026_DLC.pdf",
+      "title": "Lecture 1 · 開發平台與工具鏈",
+      "pages": 136
+    }
+  ],
+  "sections": [
+    {
+      "id": "ch1-s1",
+      "title": "平台與 Linux 分層",
+      "level": 1,
+      "importance": 2,
+      "connectionLevel": 3,
+      "connections": [
+        {
+          "target": "ch6",
+          "label": "裝置驅動",
+          "reason": "先分清使用者程式、核心與硬體，才能理解驅動程式的位置。"
+        }
+      ],
+      "sourceRefs": [
+        {
+          "file": "Lecture1_微算機實習_嵌入式系統開發平台安裝建置_2026_DLC.pdf",
+          "pages": "5–13、23–25、28–39、41–51、88–97"
+        }
+      ],
+      "intro": "平台決定執行環境；Linux 核心把程式需求轉成硬體操作。",
+      "points": [
+        {
+          "term": "ARM 與 x86",
+          "text": "指令集不同；TX2 使用 ARMv8 / AArch64。ARM 的授權模式與低功耗定位是背景重點，不宜把 RISC 簡化成任何情況都比較快。"
+        },
+        {
+          "term": "Cortex 分工",
+          "text": "A 偏應用程式、M 偏微控制器、R 偏即時控制；TX2 有 Denver 2 與 Cortex-A57 CPU，搭配 Pascal GPU。"
+        },
+        {
+          "term": "系統分層",
+          "text": "硬體 → Linux 核心 → 系統服務／函式庫 → 應用程式。核心負責排程、記憶體、檔案系統、網路與驅動。"
+        },
+        {
+          "term": "VM 與開發環境",
+          "text": "課堂以 Ubuntu VM 當開發端，TX2 當執行端；這是兩套可各自執行 Linux 的環境。"
+        }
+      ],
+      "pitfall": "在 VM 開啟終端機，不等於已進入 TX2；以 ssh 登入後才是在遠端下指令。",
+      "questions": [
+        {
+          "level": 1,
+          "prompt": "Shell 與 Kernel 各負責什麼？",
+          "answer": "Shell 接收與解讀使用者命令；Kernel 管理硬體與系統資源，提供系統呼叫。"
+        },
+        {
+          "level": 2,
+          "prompt": "為什麼兩台機器都跑 Ubuntu，程式仍可能不能直接共用？",
+          "answer": "作業系統名稱相同不代表 CPU 指令集與函式庫相容；x86 執行檔通常不能直接在 ARM TX2 執行。"
+        }
+      ],
+      "table": {
+        "headers": [
+          "目錄",
+          "記憶重點"
+        ],
+        "rows": [
+          [
+            "/home",
+            "使用者家目錄"
+          ],
+          [
+            "/dev",
+            "裝置節點"
+          ],
+          [
+            "/sys、/proc",
+            "核心／裝置資訊的虛擬介面"
+          ],
+          [
+            "/etc、/lib",
+            "系統設定／函式庫"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "ch1-s2",
+      "title": "指令、檔案與權限",
+      "level": 1,
+      "importance": 3,
+      "connectionLevel": 3,
+      "connections": [
+        {
+          "target": "ch2",
+          "label": "GPIO 檔案操作",
+          "reason": "讀寫 GPIO 介面會遇到檔案路徑與存取權限。"
+        },
+        {
+          "target": "ch6",
+          "label": "裝置節點",
+          "reason": "/dev 節點同樣受擁有者與權限控制。"
+        }
+      ],
+      "sourceRefs": [
+        {
+          "file": "Lab0_Ubuntu編譯程式.pdf",
+          "pages": "5–10"
+        },
+        {
+          "file": "Lecture1_微算機實習_嵌入式系統開發平台安裝建置_2026_DLC.pdf",
+          "pages": "52–86"
+        }
+      ],
+      "intro": "遇到錯誤時，先分辨路徑、權限、程序與網路四種問題。",
+      "points": [
+        {
+          "term": "檔案操作",
+          "text": "pwd 看目前位置；ls -al 看隱藏檔、型別與權限；cd 切換目錄；cp / mv / mkdir 管理檔案。"
+        },
+        {
+          "term": "權限計算",
+          "text": "u / g / o 依序是擁有者、群組、其他人；r=4、w=2、x=1，因此 755 = rwxr-xr-x。"
+        },
+        {
+          "term": "權限與擁有者",
+          "text": "chmod 改權限，chown 改擁有者，chgrp 改群組；UID / GID 用來辨識帳號與群組。"
+        },
+        {
+          "term": "其他常用工具",
+          "text": "man 查說明，find 找檔，grep 找文字，ps 看程序，kill 傳送訊號；Shell script 可把命令串成腳本。"
+        }
+      ],
+      "pitfall": "Permission denied 不一定要設成 777；先確認是缺執行權限、目錄權限，還是操作了受限制的裝置。",
+      "questions": [
+        {
+          "level": 1,
+          "prompt": "chmod 640 note.txt 代表哪三組權限？",
+          "answer": "擁有者可讀寫（rw-），群組可讀（r--），其他人無權限（---）。"
+        },
+        {
+          "level": 2,
+          "prompt": "chmod、chown、chgrp 分別改變什麼？",
+          "answer": "chmod 改存取權限；chown 改擁有者；chgrp 改所屬群組。"
+        },
+        {
+          "level": 2,
+          "prompt": "找不到執行檔與缺少執行權限，應先用哪些指令區分？",
+          "answer": "先用 pwd、ls 確認位置及檔案存在，再用 ls -l 看 x 權限；必要時使用 chmod u+x。"
+        }
+      ],
+      "code": {
+        "caption": "最小原生編譯流程（在同一台 Linux 主機）",
+        "language": "sh",
+        "text": "pwd\nls -al\ng++ -o hello helloworld.cpp\nfile hello\n./hello"
+      }
+    },
+    {
+      "id": "ch1-s3",
+      "title": "GCC 四階段與跨平台流程",
+      "level": 2,
+      "importance": 3,
+      "connectionLevel": 3,
+      "connections": [
+        {
+          "target": "ch3",
+          "label": "Qt 部署",
+          "reason": "Qt 原始碼可跨平台，但產出的執行檔仍取決於目標工具鏈。"
+        },
+        {
+          "target": "ch6",
+          "label": "核心模組編譯",
+          "reason": "模組也必須符合執行端的架構與核心環境。"
+        }
+      ],
+      "sourceRefs": [
+        {
+          "file": "Lecture1_微算機實習_嵌入式系統開發平台安裝建置_2026_DLC.pdf",
+          "pages": "90–103、125–136"
+        },
+        {
+          "file": "Lab01_source_code/Lab1_基礎嵌入式系統程式編譯_V4.pdf",
+          "pages": "14–18、21、24–27"
+        }
+      ],
+      "intro": "交叉編譯是「在 Host 執行編譯器，產出給 Target 執行的程式」。",
+      "points": [
+        {
+          "term": "四個階段",
+          "text": "前處理（展開 #include / 巨集）→ 編譯（產生組語）→ 組譯（產生 .o）→ 連結（整合目的檔與函式庫）。"
+        },
+        {
+          "term": "常用參數",
+          "text": "-E 停在前處理；-c 產出目的檔且不連結；-o 指定輸出；-g 加除錯資訊；-I 指標頭路徑，-L 指函式庫搜尋路徑。"
+        },
+        {
+          "term": "Native / Cross",
+          "text": "在 TX2 用本機 g++ 編譯並於 TX2 執行是 native；在 x86 VM 用 aarch64-linux-gnu-g++ 產出 ARM 程式是 cross。"
+        },
+        {
+          "term": "連線與傳送",
+          "text": "ssh 遠端登入；ssh -Y 啟用 X11 轉送供圖形程式使用；scp 或 SFTP 傳檔。TX2 的 IP 依連線環境確認，不背死範例位址。"
+        }
+      ],
+      "pitfall": "編譯成功只代表產出檔案；還要用 file 確認架構，並在 TX2 驗證函式庫與實際執行結果。",
+      "questions": [
+        {
+          "level": 1,
+          "prompt": "g++ -c main.cpp -o main.o 停在哪裡？",
+          "answer": "產出 main.o 目的檔，尚未把其他目的檔與函式庫連結成執行檔。"
+        },
+        {
+          "level": 2,
+          "prompt": "在 VM 執行 aarch64-linux-gnu-g++，編譯器在哪裡跑？輸出在哪裡跑？",
+          "answer": "編譯器在 Host VM 執行；輸出是 ARM / AArch64 程式，預定在 Target TX2 執行。"
+        },
+        {
+          "level": 3,
+          "prompt": "程式已傳到 TX2 卻出現 Exec format error，優先檢查什麼？",
+          "answer": "用 file 檢查是否錯傳 x86 執行檔；確認使用 AArch64 工具鏈，並比對 TX2 架構。"
+        }
+      ],
+      "diagram": "toolchain",
+      "code": {
+        "caption": "交叉編譯 → 傳輸 → 遠端執行",
+        "language": "sh",
+        "text": "# 在 Host VM\naarch64-linux-gnu-g++ -std=c++11 main.cpp -o tx2_app\nfile tx2_app\nscp tx2_app nvidia@<TX2_IP>:~/\nssh -Y nvidia@<TX2_IP>\n# 登入 TX2 後\n./tx2_app"
+      }
+    },
+    {
+      "id": "ch1-s4",
+      "title": "Makefile：相依關係與增量編譯",
+      "level": 2,
+      "importance": 3,
+      "connectionLevel": 3,
+      "connections": [
+        {
+          "target": "ch3",
+          "label": "qmake → make",
+          "reason": "qmake 產生 Makefile，make 再依規則執行建置。"
+        },
+        {
+          "target": "ch6",
+          "label": "Kbuild",
+          "reason": "編譯核心模組也會用 Makefile 與 make。"
+        }
+      ],
+      "sourceRefs": [
+        {
+          "file": "Lab0_Ubuntu編譯程式.pdf",
+          "pages": "11–16"
+        },
+        {
+          "file": "Lab01_source_code/Lab1_基礎嵌入式系統程式編譯_V4.pdf",
+          "pages": "20–21、25–27"
+        },
+        {
+          "file": "Lecture1_微算機實習_嵌入式系統開發平台安裝建置_2026_DLC.pdf",
+          "pages": "104–114"
+        }
+      ],
+      "intro": "make 依相依關係與時間戳決定要重建哪些目標，本身不是 C++ 編譯器。",
+      "points": [
+        {
+          "term": "一條規則",
+          "text": "target: prerequisites，下一行以 Tab 開頭寫 recipe；預設從第一個目標開始。"
+        },
+        {
+          "term": "增量編譯",
+          "text": "目標不存在，或相依檔比目標新，就需要重建；標頭檔也應列入相關目標的相依關係。"
+        },
+        {
+          "term": "變數與自動變數",
+          "text": "$(CXX) 是編譯器，$(CXXFLAGS) 是選項；$@ 是目標，$< 是第一個相依檔，$^ 是全部相依檔，$? 是較新的相依檔。"
+        },
+        {
+          "term": "Lab 1 驗證",
+          "text": "all 建置、clean 清除執行檔與 .o；使用變數與自動變數，再把 ARM 程式送到 TX2 執行。幾何形狀面積排序是驗證輸出。"
+        }
+      ],
+      "pitfall": "recipe 前面是 Tab；程式最後連結時通常需要所有 .o，不能只用 $? 取代全部目的檔。",
+      "questions": [
+        {
+          "level": 1,
+          "prompt": "$@、$<、$^ 分別代表什麼？",
+          "answer": "依序是目前規則的目標、第一個相依檔、全部相依檔。"
+        },
+        {
+          "level": 2,
+          "prompt": "只改 function.cpp，且相依關係正確，make 需要重建什麼？",
+          "answer": "重新編譯 function.o，再重新連結執行檔；未受影響的其他 .o 可沿用。"
+        },
+        {
+          "level": 3,
+          "prompt": "某 .h 已改動，但 make 沒有重編譯對應 .o，最可能缺少什麼？",
+          "answer": "Makefile 沒把該標頭列為對應 .o 的相依檔，導致時間戳變化未被納入判斷。"
+        }
+      ],
+      "code": {
+        "caption": "觀念示例：recipe 每行以 Tab 開頭",
+        "language": "makefile",
+        "text": "CXX = aarch64-linux-gnu-g++\nCXXFLAGS = -std=c++11\nOBJS = main.o function.o\n\nall: app\napp: $(OBJS)\n\t$(CXX) $(OBJS) -o $@\n%.o: %.cpp\n\t$(CXX) $(CXXFLAGS) -c $< -o $@\nclean:\n\trm -f app $(OBJS)\n.PHONY: all clean"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "prompt": "我能從「編輯 → 交叉編譯 → 傳檔 → 登入 → 執行」說清楚每一步在哪台機器做。",
+      "answer": "Host VM 編輯並交叉編譯；透過 scp / SFTP 傳到 TX2；ssh 登入 TX2 後執行。若在 TX2 本機編譯，則是 native。"
+    },
+    {
+      "prompt": "我能把 755、$@、-c 與 ssh -Y 各用一句話解釋。",
+      "answer": "755：rwxr-xr-x；$@：目前目標；-c：只編譯／組譯不連結；ssh -Y：透過 SSH 使用受信任的 X11 轉送。"
+    },
+    {
+      "prompt": "我能區分找不到檔案、權限不足、架構不符與缺函式庫。",
+      "answer": "依序先查 pwd / ls，再查 ls -l 權限，再用 file 比對架構；缺少共享函式庫則檢查 Target 是否有相符的執行環境。"
+    }
+  ]
+}

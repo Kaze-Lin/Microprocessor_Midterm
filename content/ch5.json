@@ -1,0 +1,359 @@
+{
+  "id": "ch5",
+  "number": "05",
+  "title": "通訊、感測與 SPI",
+  "subtitle": "從一筆訊號，到一個可判斷的事件。",
+  "summary": "比較 I²C、SPI、UART；用 MCP3008 讀取 LDR，再串接 LED 與相機。",
+  "sources": [
+    {
+      "file": "Lecture5_Microprocessor-Systems_v3.pdf",
+      "title": "Lecture 5 · 通訊協定、感測器與視訊",
+      "pages": 48
+    },
+    {
+      "file": "Lab5/Lab5-SPI控制實習_V3.pdf",
+      "title": "Lab 5 · SPI 控制實習",
+      "pages": 41
+    }
+  ],
+  "sections": [
+    {
+      "id": "ch5-s1",
+      "title": "先選介面：I²C、SPI、UART",
+      "level": 2,
+      "importance": 3,
+      "connectionLevel": 3,
+      "connections": [
+        {
+          "target": "ch6",
+          "label": "裝置驅動",
+          "reason": "介面差異藏在驅動內，應用透過標準操作存取。"
+        }
+      ],
+      "sourceRefs": [
+        {
+          "file": "Lecture5_Microprocessor-Systems_v3.pdf",
+          "pages": "4–21"
+        }
+      ],
+      "intro": "先看裝置支援的協定，再比較時脈、選址與接線。",
+      "points": [
+        {
+          "term": "串列與並列",
+          "text": "串列依序送位元；並列同時送多位元。接腳數、串音與時序偏移都影響介面選擇。"
+        },
+        {
+          "term": "I²C 交易",
+          "text": "Start → 位址與 R/W → ACK → 資料 → Stop。每 8 bits 後有第 9 個 ACK/NACK 時脈；開汲極訊號需要上拉。"
+        },
+        {
+          "term": "UART 訊框",
+          "text": "無獨立時脈；TX 接對方 RX。雙方約定鮑率、資料位元與校驗；訊框含 Start、Data、選用 Parity、Stop。"
+        }
+      ],
+      "table": {
+        "headers": [
+          "介面",
+          "時脈／選裝置",
+          "資料與接線"
+        ],
+        "rows": [
+          [
+            "I²C",
+            "共用 SCL／位址",
+            "SDA、SCL；共用 SDA 分時收發"
+          ],
+          [
+            "SPI",
+            "SCLK／CS",
+            "MOSI、MISO、SCLK、CS；典型四線全雙工"
+          ],
+          [
+            "UART",
+            "無時脈線／通常點對點",
+            "TX、RX；雙方設定須一致"
+          ]
+        ]
+      },
+      "pitfall": "線數不含電源與 GND；不要只憑教材中的典型速率判斷所有晶片。",
+      "questions": [
+        {
+          "level": 1,
+          "prompt": "哪一種介面沒有獨立時脈線？它如何同步解碼？",
+          "answer": "UART。雙方先約定鮑率與訊框格式，再由 Start bit 建立接收時序。"
+        },
+        {
+          "level": 2,
+          "prompt": "I²C 的第 9 個時脈做什麼？接收方拉低代表什麼？",
+          "answer": "傳送 ACK/NACK；接收方將 SDA 拉低表示 ACK。"
+        },
+        {
+          "level": 2,
+          "prompt": "多顆裝置共用匯流排時，I²C 與 SPI 如何選擇對象？",
+          "answer": "I²C 以位址選擇；典型 SPI 以各裝置獨立的 CS 選擇。"
+        }
+      ]
+    },
+    {
+      "id": "ch5-s2",
+      "title": "SPI 時序與 MCP3008 讀值",
+      "level": 3,
+      "importance": 3,
+      "connectionLevel": 3,
+      "connections": [
+        {
+          "target": "ch6",
+          "label": "SPI 裝置介面",
+          "reason": "硬體 SPI 的使用會進一步依賴核心驅動與裝置節點。"
+        }
+      ],
+      "sourceRefs": [
+        {
+          "file": "Lecture5_Microprocessor-Systems_v3.pdf",
+          "pages": "13–16、26–29"
+        },
+        {
+          "file": "Lab5/Lab5-SPI控制實習_V3.pdf",
+          "pages": "17–25"
+        }
+      ],
+      "intro": "SPI 的線要接對，取樣邊緣與回傳位元也要對齊。",
+      "points": [
+        {
+          "term": "四條訊號",
+          "text": "主機輸出 SCLK、MOSI；從機輸出 MISO。CS 通常低電位有效，交易期間保持選取。"
+        },
+        {
+          "term": "模式",
+          "text": "CPOL 決定閒置時脈電位；CPHA 決定第幾個邊緣取樣。主從設定必須一致。"
+        },
+        {
+          "term": "MCP3008",
+          "text": "10-bit、8 通道，結果 0–1023。單端 CH0 可傳 [0x01, 0x80, 0x00]，回收 10 個有效資料位元。"
+        },
+        {
+          "term": "兩種實作",
+          "text": "Lab 5 以 Jetson.GPIO 軟體切換腳位模擬 SPI；Lecture 5 示範 spidev 硬體 SPI。編號模式與接線要分別確認。"
+        }
+      ],
+      "table": {
+        "headers": [
+          "Mode",
+          "CPOL",
+          "CPHA",
+          "取樣邊緣"
+        ],
+        "rows": [
+          [
+            "0",
+            "0",
+            "0",
+            "上升緣，第一個邊緣"
+          ],
+          [
+            "1",
+            "0",
+            "1",
+            "下降緣，第二個邊緣"
+          ],
+          [
+            "2",
+            "1",
+            "0",
+            "下降緣，第一個邊緣"
+          ],
+          [
+            "3",
+            "1",
+            "1",
+            "上升緣，第二個邊緣"
+          ]
+        ]
+      },
+      "code": {
+        "caption": "Lecture 5：單次 3-byte 交易與 10-bit 解碼",
+        "language": "python",
+        "text": "# spi 已依實際 bus/device 初始化，mode = 0\nchannel = 0  # 0–7\nrx = spi.xfer2([1, (8 + channel) << 4, 0])\nadc = ((rx[1] & 0x03) << 8) | rx[2]"
+      },
+      "diagram": "spi",
+      "pitfall": "實體接腳、BCM 編號與 ADC 通道是不同編號；不能把 CH0 當成開發板 Pin 0。",
+      "questions": [
+        {
+          "level": 1,
+          "prompt": "MOSI 與 MISO 的資料方向各是什麼？",
+          "answer": "MOSI 是主機到從機；MISO 是從機到主機。"
+        },
+        {
+          "level": 2,
+          "prompt": "Mode 2 的閒置電位與取樣邊緣為何？",
+          "answer": "CPOL=1，閒置為高；CPHA=0，在第一個邊緣，也就是下降緣取樣。"
+        },
+        {
+          "level": 3,
+          "prompt": "若 rx[1] = 0x02、rx[2] = 0x5A，解碼結果是多少？",
+          "answer": "((2 & 3) << 8) | 0x5A = 512 + 90 = 602。"
+        }
+      ]
+    },
+    {
+      "id": "ch5-s3",
+      "title": "ADC、LDR 與門檻判斷",
+      "level": 3,
+      "importance": 3,
+      "connectionLevel": 3,
+      "connections": [
+        {
+          "target": "ch6",
+          "label": "感測資料的取得",
+          "reason": "應用得到讀值前，需要底層介面與驅動完成資料交換。"
+        }
+      ],
+      "sourceRefs": [
+        {
+          "file": "Lecture5_Microprocessor-Systems_v3.pdf",
+          "pages": "23–40"
+        },
+        {
+          "file": "Lab5/Lab5-SPI控制實習_V3.pdf",
+          "pages": "11–12、26、40"
+        }
+      ],
+      "intro": "LDR 改變電阻，分壓產生電壓，ADC 再把電壓變成數字。",
+      "points": [
+        {
+          "term": "取樣與量化",
+          "text": "n-bit ADC 有 2ⁿ 個碼；理想 LSB = VREF / 2ⁿ。3.3 V、10-bit 約為 3.22 mV；解析度不等於實際準確度。"
+        },
+        {
+          "term": "本課分壓接法",
+          "text": "上方固定 10 kΩ，下方 LDR 接地：VOUT = 3.3 × RLDR / (10 kΩ + RLDR)。光越強，電阻與電壓越低。"
+        },
+        {
+          "term": "感測器特性",
+          "text": "線性度看接近直線的程度；靈敏度看輸入每變一單位的輸出變化；響應時間與頻率響應描述動態表現。"
+        },
+        {
+          "term": "門檻與遲滯",
+          "text": "實測亮暗值後設定門檻。例：≥600 開燈、≤450 關燈，中間保留原狀態，可減少臨界值附近反覆切換。"
+        }
+      ],
+      "table": {
+        "headers": [
+          "LDR 位於接地端",
+          "VOUT",
+          "理想 ADC 碼估算"
+        ],
+        "rows": [
+          [
+            "強光：RLDR = 1 kΩ",
+            "0.30 V",
+            "約 93"
+          ],
+          [
+            "暗處：RLDR = 100 kΩ",
+            "3.00 V",
+            "約 931"
+          ]
+        ]
+      },
+      "pitfall": "交換 LDR 與固定電阻位置，亮暗讀值方向會反轉；TX2 的 GPIO 不能直接量測類比電壓。",
+      "questions": [
+        {
+          "level": 1,
+          "prompt": "為何 Lab 5 要加入 MCP3008，而非直接用 GPIO 讀取 LDR？",
+          "answer": "LDR 的類比訊號需先經分壓成電壓再由 ADC 轉成數位值；本課 TX2 GPIO 沒有直接提供此 ADC 功能。"
+        },
+        {
+          "level": 2,
+          "prompt": "3.3 V、10-bit ADC 的理想 LSB 是多少？輸出範圍是多少？",
+          "answer": "3.3 / 1024 ≈ 3.22 mV；輸出整數為 0–1023。"
+        },
+        {
+          "level": 3,
+          "prompt": "LDR 在接地端時，為何變暗反而得到較大的 ADC 值？",
+          "answer": "變暗使 RLDR 增大，分壓比 RLDR/(10 kΩ + RLDR) 增大，因此 VOUT 與 ADC 碼都增大。"
+        }
+      ]
+    },
+    {
+      "id": "ch5-s4",
+      "title": "CSI 影像管線與防盜快照",
+      "level": 3,
+      "importance": 2,
+      "connectionLevel": 2,
+      "connections": [
+        {
+          "target": "ch6",
+          "label": "相機與系統整合",
+          "reason": "相機擷取、GPIO 與感測器都需要應用和底層驅動協作。"
+        }
+      ],
+      "sourceRefs": [
+        {
+          "file": "Lecture5_Microprocessor-Systems_v3.pdf",
+          "pages": "41–48"
+        },
+        {
+          "file": "Lab5/Lab5-SPI控制實習_V3.pdf",
+          "pages": "13、28–38"
+        }
+      ],
+      "intro": "先看懂資料流，再用明確狀態管理異常、拍照與復歸。",
+      "points": [
+        {
+          "term": "控制與影像分工",
+          "text": "相機以 I²C 設定曝光、模式等暫存器；MIPI CSI-2 傳送高速影像，ISP 處理 RAW 影像。"
+        },
+        {
+          "term": "GStreamer 管線",
+          "text": "Source → Caps → Transform → Sink。nvarguscamerasrc 取像，nvvidconv 轉換，xvimagesink 顯示；appsink 可交給 OpenCV。"
+        },
+        {
+          "term": "NVMM 與 OpenCV",
+          "text": "NVMM 用於硬體影像記憶體路徑；送至 OpenCV 時，教材管線再轉到系統記憶體與 BGR，不能把整條管線都視為零拷貝。"
+        },
+        {
+          "term": "Lab 5 狀態",
+          "text": "正常時比較目前與前次 ADC；觸發後保存異常前基準，交互閃 LED、每輪拍 3 張並以時間命名；持續比對原基準，回復門檻內才復歸。"
+        }
+      ],
+      "code": {
+        "caption": "課堂相機測試指令；元件須配合 Jetson 軟體環境",
+        "language": "shell",
+        "text": "gst-launch-1.0 nvarguscamerasrc ! nvvidconv ! xvimagesink\n# OpenCV：cv2.VideoCapture(pipeline, cv2.CAP_GSTREAMER)"
+      },
+      "pitfall": "異常期間若一直更新比較基準，可能把持續異常誤判為正常；原始基準要保留到復歸。",
+      "questions": [
+        {
+          "level": 1,
+          "prompt": "相機的 I²C 與 CSI-2 各負責什麼？",
+          "answer": "I²C 負責控制設定；CSI-2 負責高速影像資料傳送。"
+        },
+        {
+          "level": 2,
+          "prompt": "GStreamer 的 appsink 在本課管線中有何用途？",
+          "answer": "作為影像接收端，把轉換後的影格交給 OpenCV 等應用程式處理。"
+        },
+        {
+          "level": 3,
+          "prompt": "初次異常拍照後，應拿即時 ADC 與哪個值比較，才能判斷是否復歸？",
+          "answer": "與進入異常前保存的原始基準值比較；差值仍超過門檻就持續警報與追拍。"
+        }
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "prompt": "不看筆記，畫出 LDR → ADC → SPI → TX2 → LED 的資料與控制方向。",
+      "answer": "LDR 分壓電壓送入 MCP3008 類比通道；TX2 以 MOSI 送命令、SCLK 提供時脈、CS 選晶片，從 MISO 取數字；程式判斷後由 GPIO 控制 LED。"
+    },
+    {
+      "prompt": "能從 SPI 模式與接收位元組，說明讀值為何可能全錯嗎？",
+      "answer": "檢查 CPOL/CPHA、CS 有效期間、時脈與接線、ADC 通道，以及遮罩和位移。軟體 SPI 與硬體 SPI 還要分別確認腳位編號和裝置設定。"
+    },
+    {
+      "prompt": "能完整描述 Lab 5 防盜快照的正常、異常、復歸三個狀態嗎？",
+      "answer": "正常時監測相鄰讀值差；異常時保留觸發前基準、LED 交替閃爍與連拍存檔；持續以即時值對原基準判斷，回到門檻內才關相機、熄燈並復歸。"
+    }
+  ]
+}

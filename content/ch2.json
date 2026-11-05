@@ -1,0 +1,322 @@
+{
+  "id": "ch2",
+  "number": "02",
+  "title": "GPIO：從腳位到 LED",
+  "subtitle": "把一個位元，變成看得見的控制。",
+  "summary": "分清方向、電位與腳位編號，再用課堂 TX2 的 sysfs 介面完成四顆 LED 控制。",
+  "sources": [
+    {
+      "file": "Lecture2_GPIO2026.pdf",
+      "title": "Lecture 2 · GPIO",
+      "pages": 45
+    },
+    {
+      "file": "Lab2/Lab2-GPIO_V2.pdf",
+      "title": "Lab 2 · C/C++ 控制 LED",
+      "pages": 15
+    }
+  ],
+  "sections": [
+    {
+      "id": "ch2-s1",
+      "title": "方向與電位，是兩件事",
+      "level": 1,
+      "importance": 3,
+      "connectionLevel": 3,
+      "connections": [
+        {
+          "target": "ch3",
+          "label": "Qt 控制介面",
+          "reason": "按鈕事件最後仍要轉成 GPIO 輸出。"
+        },
+        {
+          "target": "ch5",
+          "label": "SPI",
+          "reason": "先理解訊號方向，再理解多條序列匯流排訊號。"
+        }
+      ],
+      "sourceRefs": [
+        {
+          "file": "Lecture2_GPIO2026.pdf",
+          "pages": "4、7–12"
+        }
+      ],
+      "intro": "GPIO 以單一位元讀取輸入，或輸出高、低電位。",
+      "points": [
+        {
+          "term": "方向",
+          "text": "控制暫存器決定 in / out；輸入讀取外界狀態，輸出驅動外部電路。"
+        },
+        {
+          "term": "數據",
+          "text": "資料暫存器的位元對應腳位狀態；1 / 0 表示邏輯高 / 低。"
+        },
+        {
+          "term": "複用",
+          "text": "特定腳位也可用於 I²C、SPI、UART、Timer 或中斷，使用前需核對功能。"
+        }
+      ],
+      "diagram": "gpio",
+      "pitfall": "把 direction 設成 out 只決定方向；還要設定 value 才能決定輸出電位。",
+      "questions": [
+        {
+          "level": 1,
+          "prompt": "direction 與 value 各控制什麼？",
+          "answer": "direction 設定輸入或輸出；value 表示讀取或輸出的邏輯值。"
+        },
+        {
+          "level": 2,
+          "prompt": "按鈕狀態讀取與 LED 開關，分別應使用哪個方向？",
+          "answer": "按鈕是輸入 in；LED 控制是輸出 out。實際電位與亮滅關係仍取決於接線。"
+        },
+        {
+          "level": 2,
+          "prompt": "為什麼看到同一腳位標示 GPIO 與 SPI，不能直接假設兩者可同時使用？",
+          "answer": "它可能是複用腳位，必須確認目前配置與用途；同一實體腳位不能任意承擔互相衝突的訊號功能。"
+        }
+      ]
+    },
+    {
+      "id": "ch2-s2",
+      "title": "Physical pin ≠ sysfs 編號",
+      "level": 2,
+      "importance": 3,
+      "connectionLevel": 3,
+      "connections": [
+        {
+          "target": "ch4",
+          "label": "遠端 LED",
+          "reason": "網頁指定 LED，後端仍須對到正確硬體腳位。"
+        },
+        {
+          "target": "ch5",
+          "label": "SPI 接線",
+          "reason": "接線位置與 Linux 裝置名稱需要分開辨識。"
+        }
+      ],
+      "sourceRefs": [
+        {
+          "file": "Lecture2_GPIO2026.pdf",
+          "pages": "15–23"
+        },
+        {
+          "file": "Lab2/Lab2-GPIO_V2.pdf",
+          "pages": "13–14"
+        }
+      ],
+      "intro": "J21 排針的位置編號，與 Linux 使用的 GPIO 編號不同。",
+      "points": [
+        {
+          "term": "實體位置",
+          "text": "Physical pin 用來找到 J21 上的接線位置；電源、GND 與訊號腳位需先區分。"
+        },
+        {
+          "term": "Linux 編號",
+          "text": "課堂 sysfs 流程使用 gpio 後面的數字，例如 J21 Pin 15 對應 gpio255。"
+        },
+        {
+          "term": "排線方向",
+          "text": "Lab 2 提醒：彩虹排線的兩排位置會反轉，應依實際接頭方向重新核對。"
+        }
+      ],
+      "table": {
+        "headers": [
+          "J21 實體腳位",
+          "課堂 sysfs filename"
+        ],
+        "rows": [
+          [
+            "Pin 7",
+            "gpio396"
+          ],
+          [
+            "Pin 11",
+            "gpio466"
+          ],
+          [
+            "Pin 12",
+            "gpio392"
+          ],
+          [
+            "Pin 13",
+            "gpio397"
+          ],
+          [
+            "Pin 15",
+            "gpio255"
+          ],
+          [
+            "Pin 18",
+            "gpio481"
+          ]
+        ]
+      },
+      "pitfall": "這張對照表適用教材的 TX2 環境；不要把實體 Pin 15 直接寫成 export 15。",
+      "questions": [
+        {
+          "level": 1,
+          "prompt": "課堂 TX2 的 J21 Pin 15，在 sysfs 應使用哪個編號？",
+          "answer": "255；啟用後會出現 gpio255 目錄。"
+        },
+        {
+          "level": 2,
+          "prompt": "程式輸出成功但 LED 不亮，為何仍要檢查排線方向？",
+          "answer": "軟體可能控制正確 gpio，但 LED 插在錯誤的實體位置；Lab 2 特別提醒排線會造成兩排位置反轉。"
+        },
+        {
+          "level": 2,
+          "prompt": "接 LED 前，為什麼要先區分電源、接地與可控制訊號腳？",
+          "answer": "它們的電氣用途不同；電源與 GND 不是可任意設定 in / out 的 GPIO。應依教材 pinout 與電路接線。"
+        }
+      ]
+    },
+    {
+      "id": "ch2-s3",
+      "title": "sysfs 操作的四個步驟",
+      "level": 2,
+      "importance": 3,
+      "connectionLevel": 3,
+      "connections": [
+        {
+          "target": "ch4",
+          "label": "Web 到硬體",
+          "reason": "後端控制程式重用相同 GPIO 流程。"
+        },
+        {
+          "target": "ch6",
+          "label": "驅動介面",
+          "reason": "使用者透過核心提供的介面操作硬體。"
+        }
+      ],
+      "sourceRefs": [
+        {
+          "file": "Lecture2_GPIO2026.pdf",
+          "pages": "24–36、43"
+        }
+      ],
+      "intro": "課堂使用 export → direction → value → unexport 管理 GPIO。",
+      "points": [
+        {
+          "term": "啟用",
+          "text": "把 GPIO 編號寫入 export，產生對應的 gpioN 目錄。"
+        },
+        {
+          "term": "控制",
+          "text": "direction 設 out，再寫 value 為 1 或 0；輸入方向則讀取 value。"
+        },
+        {
+          "term": "權限與釋放",
+          "text": "教材操作需 root 權限；結束時可寫 unexport 釋放。C/C++ 以開檔、讀寫、關檔存取這些介面。"
+        }
+      ],
+      "code": {
+        "caption": "課堂 TX2 範例；在具權限的 shell 逐行操作",
+        "language": "sh",
+        "text": "cd /sys/class/gpio\necho 255 > export\necho out > gpio255/direction\necho 1 > gpio255/value\ncat gpio255/value\necho 0 > gpio255/value\necho 255 > unexport"
+      },
+      "pitfall": "此處整理課堂的 sysfs 操作，不代表所有 Linux 平台都使用同一套 GPIO 介面與編號。",
+      "questions": [
+        {
+          "level": 1,
+          "prompt": "export 與 unexport 各做什麼？",
+          "answer": "export 啟用指定 GPIO 的 sysfs 介面；unexport 釋放該介面。"
+        },
+        {
+          "level": 2,
+          "prompt": "要使範例 gpio255 輸出低電位，應修改哪個檔案、寫入什麼？",
+          "answer": "先確認 direction 為 out，再向 /sys/class/gpio/gpio255/value 寫入 0。"
+        },
+        {
+          "level": 2,
+          "prompt": "程式已有執行權限，控制 GPIO 卻出現 Permission denied，原因可能是什麼？",
+          "answer": "可執行檔的 x 權限與 GPIO 介面的存取權限不同；課堂範例應使用 sudo 執行控制程式。"
+        }
+      ]
+    },
+    {
+      "id": "ch2-s4",
+      "title": "Lab 2：命令列控制四顆 LED",
+      "level": 3,
+      "importance": 3,
+      "connectionLevel": 3,
+      "connections": [
+        {
+          "target": "ch3",
+          "label": "圖形化操作",
+          "reason": "將命令列操作改由 GUI 事件觸發。"
+        },
+        {
+          "target": "ch4",
+          "label": "子程序參數",
+          "reason": "Web 後端會將 LED 與狀態傳給同類控制程式。"
+        }
+      ],
+      "sourceRefs": [
+        {
+          "file": "Lab2/Lab2-GPIO_V2.pdf",
+          "pages": "9–12、15"
+        },
+        {
+          "file": "Lecture2_GPIO2026.pdf",
+          "pages": "39–44"
+        }
+      ],
+      "intro": "把參數解析、GPIO 操作與編譯部署接成完整流程。",
+      "points": [
+        {
+          "term": "建置",
+          "text": "Lab 2 要求跨平台編譯與 Makefile；用 aarch64-linux-gnu-g++ 產生 TX2 可執行檔，並用 file 檢查架構。"
+        },
+        {
+          "term": "單燈控制",
+          "text": "./L2Program LED1 on 只改變 LED1，其他三顆狀態保持不變。先檢查 argc，再讀 argv。"
+        },
+        {
+          "term": "交替閃爍",
+          "text": "LED1、LED2 為一組，LED3、LED4 為另一組；Mode_Shine 5 表示兩組交替閃爍 5 次。"
+        },
+        {
+          "term": "字串處理",
+          "text": "snprintf 可限制寫入緩衝區大小，適合組合 gpio 路徑；仍須確認格式與容量。"
+        }
+      ],
+      "code": {
+        "caption": "參數位置範例",
+        "language": "text",
+        "text": "./L2Program LED1 on\nargc    = 3\nargv[0] = ./L2Program\nargv[1] = LED1\nargv[2] = on"
+      },
+      "pitfall": "修改單顆 LED 時，不要在每次執行都把四顆 LED 全部重設為熄滅，否則違反其他燈狀態不變的要求。",
+      "questions": [
+        {
+          "level": 1,
+          "prompt": "執行 ./L2Program Mode_Shine 5 時，argc 與 argv[2] 各是什麼？",
+          "answer": "argc 是 3；argv[2] 是字串 \"5\"，需要轉成數值才能作為次數。"
+        },
+        {
+          "level": 2,
+          "prompt": "在電腦編譯出的 LED 程式放上 TX2 卻不能執行，先檢查哪兩件事？",
+          "answer": "用 file 確認是目標 ARM64/AArch64 架構，再檢查可執行權限；操作 GPIO 時另須具備介面存取權限。"
+        },
+        {
+          "level": 3,
+          "prompt": "LED1 已亮，接著執行 LED3 on，正確結果與程式設計重點是什麼？",
+          "answer": "LED1 保持亮，LED3 變亮，其餘保持原狀。只修改指定 LED 的 value，不重新初始化所有輸出狀態。"
+        }
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "prompt": "我能不看筆記，說出從 J21 Pin 15 到 LED 亮起的完整 sysfs 路徑。",
+      "answer": "核對接線：Pin 15 → gpio255；具權限時 export 255 → gpio255/direction 寫 out → gpio255/value 寫 1；依實際電路確認亮滅，結束可 unexport 255。"
+    },
+    {
+      "prompt": "我能分辨三種問題：架構錯誤、檔案不可執行、GPIO 權限不足。",
+      "answer": "架構用 file 檢查；檔案執行權限用 ls -l / chmod +x；課堂 GPIO 操作則用 sudo 或確認介面存取權限。"
+    },
+    {
+      "prompt": "我能解釋 Lab 2 單燈與交替閃爍兩種模式的狀態變化。",
+      "answer": "單燈模式只改指定 LED；交替閃爍模式則讓 LED1/2 與 LED3/4 兩組一亮一滅，按參數指定次數重複。"
+    }
+  ]
+}

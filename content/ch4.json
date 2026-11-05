@@ -1,0 +1,280 @@
+{
+  "id": "ch4",
+  "number": "04",
+  "title": "IoT：用瀏覽器控制硬體",
+  "subtitle": "一次請求，串起前端、後端與 GPIO。",
+  "summary": "理解 IoT 三層架構，再追蹤 HTML 表單、Express 路由與 C++ 子程序之間的參數流。",
+  "sources": [
+    {
+      "file": "Lecture4_2026嵌入式系統在物聯網的應用_V3.pdf",
+      "title": "Lecture 4 · IoT、CGI 與 Node.js",
+      "pages": 58
+    },
+    {
+      "file": "Lab4/Lab4-GPIO遠端週邊控制實習_V3.pdf",
+      "title": "Lab 4 · GPIO 遠端控制",
+      "pages": 19
+    }
+  ],
+  "sections": [
+    {
+      "id": "ch4-s1",
+      "title": "IoT 三層與邊緣運算",
+      "level": 1,
+      "importance": 2,
+      "connectionLevel": 2,
+      "connections": [
+        {
+          "target": "ch5",
+          "label": "感測器介面",
+          "reason": "SPI 可連接感測器，把環境訊號帶入 IoT 系統。"
+        }
+      ],
+      "sourceRefs": [
+        {
+          "file": "Lecture4_2026嵌入式系統在物聯網的應用_V3.pdf",
+          "pages": "10–24"
+        }
+      ],
+      "intro": "IoT 將感知、通訊與應用串起來，邊緣運算把處理工作靠近資料來源。",
+      "points": [
+        {
+          "term": "感知層",
+          "text": "感測器、RFID 與影像等取得環境資訊，轉成可處理的訊號。"
+        },
+        {
+          "term": "網路層",
+          "text": "Wi-Fi、Bluetooth、Zigbee 等傳送資料，連接裝置與服務。"
+        },
+        {
+          "term": "應用層",
+          "text": "實現智慧居家、監測、交通或照護等功能；邊緣運算可降低延遲與上傳頻寬需求。"
+        },
+        {
+          "term": "CGI",
+          "text": "Common Gateway Interface 是伺服器與外部程式交換請求、結果的介面標準；教材用 Node.js/Express 示範 Web 與硬體整合。"
+        }
+      ],
+      "diagram": "network",
+      "pitfall": "分辨系統層次時，感測器是資料來源、網路負責傳輸、應用負責使用資料；不要只背產品名稱。",
+      "questions": [
+        {
+          "level": 1,
+          "prompt": "溫度感測器、Wi-Fi 與智慧漁業告警，分別對應哪一層？",
+          "answer": "溫度感測器屬感知層；Wi-Fi 屬網路層；智慧漁業告警屬應用層。"
+        },
+        {
+          "level": 2,
+          "prompt": "攝影機資料量很大時，為何可考慮在 TX2 先分析再上傳結果？",
+          "answer": "讓運算靠近資料來源，可減少上傳資料量、頻寬需求與往返延遲。"
+        },
+        {
+          "level": 2,
+          "prompt": "CGI 的核心角色是什麼？",
+          "answer": "規範 Web 伺服器與請求處理程式之間如何交換資料；程式可以使用不同語言實作。"
+        }
+      ]
+    },
+    {
+      "id": "ch4-s2",
+      "title": "Node.js、npm 與 Express",
+      "level": 2,
+      "importance": 2,
+      "connectionLevel": 2,
+      "connections": [
+        {
+          "target": "ch5",
+          "label": "延伸遠端控制",
+          "reason": "同一個 Web 服務也可作為 SPI 裝置的操作入口。"
+        }
+      ],
+      "sourceRefs": [
+        {
+          "file": "Lecture4_2026嵌入式系統在物聯網的應用_V3.pdf",
+          "pages": "25–45、48"
+        }
+      ],
+      "intro": "Node.js 執行後端 JavaScript，npm 管理套件，Express 定義 HTTP 路由。",
+      "points": [
+        {
+          "term": "專案",
+          "text": "npm init 建立 package.json，記錄專案與套件相依性；node_modules 放置已安裝模組。"
+        },
+        {
+          "term": "服務",
+          "text": "Express 可處理 method、URL、靜態檔案與回應；教材以 8080 為範例 port。"
+        },
+        {
+          "term": "除錯順序",
+          "text": "安裝失敗先查 Wi-Fi 連線，再查 IP 連通性與 DNS；服務啟動後從 TX2 的 IP:port 存取。"
+        }
+      ],
+      "code": {
+        "caption": "在課堂已安裝 Node.js/npm 的專案目錄",
+        "language": "sh",
+        "text": "npm init\nnpm install express --save\nnode index.js\n\n# 安裝失敗時分層檢查\nnmcli device wifi list\nping -c 3 8.8.8.8\ngetent hosts registry.npmjs.org"
+      },
+      "pitfall": "能 ping 到 IP，不等於 DNS 可用；能安裝套件，也不等於 Web 服務已在指定 port 啟動。",
+      "questions": [
+        {
+          "level": 1,
+          "prompt": "Node.js、npm、Express 各負責什麼？",
+          "answer": "Node.js 是 JavaScript 執行環境；npm 管理套件；Express 是建立路由與 Web 服務的框架。"
+        },
+        {
+          "level": 2,
+          "prompt": "ping 8.8.8.8 成功，但 registry.npmjs.org 無法解析，應檢查什麼？",
+          "answer": "檢查 DNS 解析與設定，例如用 getent hosts 查詢，並查看教材提到的 /etc/resolv.conf。"
+        },
+        {
+          "level": 2,
+          "prompt": "另一台電腦要開啟 TX2 上的服務，網址需要哪些資訊？",
+          "answer": "TX2 可達的 IP 位址與服務監聽的 port，例如 http://TX2的IP:8080；也要確認兩端網路可互通。"
+        }
+      ]
+    },
+    {
+      "id": "ch4-s3",
+      "title": "追蹤表單到路由的參數",
+      "level": 2,
+      "importance": 3,
+      "connectionLevel": 3,
+      "connections": [
+        {
+          "target": "ch6",
+          "label": "分層介面",
+          "reason": "先掌握請求與處理者的關係，再理解應用程式如何呼叫驅動介面。"
+        }
+      ],
+      "sourceRefs": [
+        {
+          "file": "Lecture4_2026嵌入式系統在物聯網的應用_V3.pdf",
+          "pages": "42–55"
+        },
+        {
+          "file": "Lab4/Lab4-GPIO遠端週邊控制實習_V3.pdf",
+          "pages": "11–14"
+        }
+      ],
+      "intro": "表單的 action、method 與欄位 name，必須對上後端的路由與參數名稱。",
+      "points": [
+        {
+          "term": "前端",
+          "text": "HTML 定義表單與輸入欄位，CSS 控制外觀，JavaScript 處理互動；name 是提交參數的鍵。"
+        },
+        {
+          "term": "後端",
+          "text": "教材使用 GET /index，透過 req.query.name 與 req.query.id 讀取查詢參數，再用 res.send 回應。"
+        },
+        {
+          "term": "靜態檔案",
+          "text": "express.static('./public') 提供前端檔案；Lab 4 要求提交 LED 狀態後在同一畫面顯示送出內容。"
+        }
+      ],
+      "code": {
+        "caption": "教材 GET 範例的參數對應",
+        "language": "text",
+        "text": "<form action=\"/index\" method=\"get\">\n  <input name=\"name\">\n  <input name=\"id\">\n</form>\n\n/index?name=betty&id=110598004\n    ↓\nreq.query.name  →  \"betty\"\nreq.query.id    →  \"110598004\""
+      },
+      "pitfall": "req.query 對應 URL 查詢參數；不要把教材的 GET 範例直接套成 POST body 的讀取方式。",
+      "questions": [
+        {
+          "level": 1,
+          "prompt": "表單 name=\"LED\" 用 GET 傳到 /index，Express 應讀取哪個欄位？",
+          "answer": "在 app.get('/index', ...) 中讀取 req.query.LED；參數名稱與大小寫要對應。"
+        },
+        {
+          "level": 2,
+          "prompt": "表單 action 是 /index，但後端只定義 GET /，會發生什麼對應問題？",
+          "answer": "請求路徑與路由不一致，無法進入預期的 /index 處理函式；前後端路徑與 method 都應核對。"
+        },
+        {
+          "level": 3,
+          "prompt": "如何逐段檢查「按 Submit 後 LED 沒變」？",
+          "answer": "依序確認表單有送出正確參數、路由有收到、後端有啟動控制程式、控制程式有權限且對到正確 GPIO；再核對實體接線。"
+        }
+      ]
+    },
+    {
+      "id": "ch4-s4",
+      "title": "child_process 把請求交給 C++",
+      "level": 3,
+      "importance": 3,
+      "connectionLevel": 3,
+      "connections": [
+        {
+          "target": "ch5",
+          "label": "遠端 SPI",
+          "reason": "子程序也可承接其他周邊控制程式。"
+        },
+        {
+          "target": "ch6",
+          "label": "從應用到核心",
+          "reason": "C++ 控制程式再透過作業系統介面存取硬體。"
+        }
+      ],
+      "sourceRefs": [
+        {
+          "file": "Lab4/Lab4-GPIO遠端週邊控制實習_V3.pdf",
+          "pages": "12–13、15–19"
+        }
+      ],
+      "intro": "後端接收參數，再啟動獨立的 GPIO 控制程式，並讀取輸出與錯誤。",
+      "points": [
+        {
+          "term": "API",
+          "text": "exec 透過 shell 執行命令；spawn 與 execFile 預設不開 shell；fork 用於啟動 Node.js 子程序並提供 IPC 通道。"
+        },
+        {
+          "term": "教材串接",
+          "text": "Lab 4 使用 execFile('sudo', ['./C++/gpio', LED, POWER])，讓網頁參數成為 C++ 程式的 argv。"
+        },
+        {
+          "term": "結果",
+          "text": "透過子程序的 stdout、stderr 取得訊息；收到 HTTP 請求與硬體操作完成是不同事件。"
+        },
+        {
+          "term": "模式",
+          "text": "驗收包含指定燈開關、兩組交替閃爍與流水燈；流水燈要能停止，並直接反轉目前方向。"
+        }
+      ],
+      "code": {
+        "caption": "教材的參數傳遞核心；LED、POWER 來自路由",
+        "language": "js",
+        "text": "const { execFile } = require('child_process');\nconst child = execFile('sudo', [\n  './C++/gpio', LED, POWER\n]);\nchild.stdout.on('data', data => console.log(data));\nchild.stderr.on('data', data => console.error(data));"
+      },
+      "pitfall": "參數先檢查合法 LED、狀態與次數，再傳入控制程式；教材的 sudo 範例另需確認 TX2 上的權限與密碼處理。",
+      "questions": [
+        {
+          "level": 1,
+          "prompt": "execFile('sudo', ['./C++/gpio', 'LED1', 'on']) 對應哪條命令？",
+          "answer": "sudo ./C++/gpio LED1 on；gpio 程式的 argv[1] 是 LED1，argv[2] 是 on。"
+        },
+        {
+          "level": 2,
+          "prompt": "exec 與 execFile 預設是否建立 shell？",
+          "answer": "exec 會建立 shell 執行命令；execFile 預設直接執行檔案，不建立 shell。"
+        },
+        {
+          "level": 3,
+          "prompt": "回應已顯示「收到請求」，能否直接認定 LED 已操作成功？",
+          "answer": "不能。還須確認子程序是否成功啟動與結束、stdout/stderr 是否回報錯誤，並確認硬體狀態；請求被接收只代表其中一個階段。"
+        }
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "prompt": "我能畫出瀏覽器到 LED 的參數流，並說出每層的責任。",
+      "answer": "瀏覽器表單 → HTTP 請求 → Express 路由讀取參數 → child_process 啟動 C++ 程式 → argv 解析 → sysfs/GPIO → LED；回應與控制結果也需回到使用者。"
+    },
+    {
+      "prompt": "我能由故障症狀定位網路、路由、子程序或 GPIO 問題。",
+      "answer": "無法安裝套件先查連線與 DNS；網頁不可達查 IP/port 與服務；參數未收到查 form 與路由；收到請求但燈不變查子程序錯誤、權限、腳位與接線。"
+    },
+    {
+      "prompt": "我能說出 Lab 4 四項功能，並區分短操作與持續模式。",
+      "answer": "架設 Web 服務、指定 LED 開關、兩組定次交替閃爍、可開關及反轉方向的流水燈。持續模式需要保存狀態並能接收停止或改向操作。"
+    }
+  ]
+}

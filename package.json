@@ -1,0 +1,11 @@
+{
+  "name": "microprocessor-midterm-review",
+  "version": "1.0.0",
+  "private": true,
+  "description": "115-1 微算機系統實習複習網站",
+  "scripts": {
+    "build": "node scripts/build-content.mjs",
+    "start": "node scripts/serve.mjs",
+    "check": "node --check app.js && node scripts/build-content.mjs"
+  }
+}

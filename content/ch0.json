@@ -1,0 +1,27 @@
+{
+  "id": "ch0", "number": "00", "title": "先看見系統全貌", "subtitle": "THE BIG PICTURE",
+  "summary": "從開發主機到嵌入式板子，串起程式、介面與硬體。",
+  "sources": [{"file":"Lecture0_2026微算機系統實習課程簡介.pdf","title":"Lecture 0 · 課程簡介","pages":10}],
+  "sections": [
+    {
+      "id":"ch0-s1", "title":"課程地圖與複習順序", "level":1, "importance":2, "connectionLevel":3,
+      "connections":[{"target":"ch1","label":"Linux 與編譯","reason":"先建立開發環境，再把程式放到板子上。"},{"target":"ch6","label":"裝置驅動","reason":"從應用程式一路追到核心與硬體。"}],
+      "sourceRefs":[{"file":"Lecture0_2026微算機系統實習課程簡介.pdf","pages":"3、5、7"}],
+      "intro":"複習主線：編譯程式 → 控制接腳 → 建立介面 → 遠端控制 → 讀取感測器 → 理解驅動。",
+      "points":[{"term":"先備能力","text":"能閱讀 C/C++、Python；知道程式的輸入、輸出與流程控制。"},{"term":"課程脈絡","text":"講義以 Jetson 開發平台為核心，連接 ARM-Linux、GPIO、人機介面、網路與驅動程式。"},{"term":"評量資訊","text":"Lecture 0 列出實驗與報告 60%、期中考或專案 20%、期末專題 20%。"},{"term":"本網站範圍","text":"整理你指定的 14 份教材；Lecture 0 的粗略進度把部分網路與驅動內容排在期中後，實際考試範圍仍依教師公告。"}],
+      "diagram":"roadmap", "pitfall":"難度、重要性與關聯級別是複習建議，不是教師公布的配分或出題預測。",
+      "questions":[{"level":1,"prompt":"為什麼要先學編譯，再學 GPIO 與 GUI？","answer":"先能把程式建置並在目標板執行，才有基礎加入硬體控制與使用者介面。"},{"level":2,"prompt":"用一句話串起 GUI、GPIO 與驅動程式。","answer":"GUI 接收使用者操作，應用程式透過系統提供的介面請求 GPIO 控制，驅動程式再與硬體互動。這是跨章概念整合。"}]
+    },
+    {
+      "id":"ch0-s2", "title":"認識 Jetson 與板上資源", "level":1, "importance":2, "connectionLevel":3,
+      "connections":[{"target":"ch2","label":"GPIO","reason":"同一組擴充接腳可能具有不同功能，先確認板型與編號。"},{"target":"ch5","label":"SPI 與感測","reason":"通訊介面讓處理器與外部感測器交換資料。"}],
+      "sourceRefs":[{"file":"Lecture0_2026微算機系統實習課程簡介.pdf","pages":"8–9"}],
+      "intro":"Jetson 把處理、記憶體、儲存與周邊介面放在同一個嵌入式開發平台。",
+      "points":[{"term":"運算與記憶體","text":"CPU 執行程式，RAM 保存執行中的資料；eMMC 等儲存裝置保存系統與檔案。"},{"term":"外部連接","text":"Ethernet、USB 與顯示介面負責連網、周邊與畫面；擴充接腳連接 GPIO、UART、I²C、SPI 等訊號。"},{"term":"TX2 與 Xavier NX","text":"Lecture 0 同時介紹兩種平台；CPU、儲存與接腳配置不同，操作時不能直接混用板型設定。"}],
+      "table":{"headers":["資源","記住用途","後續對應"],"rows":[["CPU / RAM","執行指令／暫存資料","編譯與程序"],["GPIO / PWM","數位輸入輸出／脈寬控制","LED、按鈕與馬達"],["UART / I²C / SPI","周邊通訊","感測器與 ADC"],["Ethernet / WLAN","網路連線","HTTP 遠端控制"]]},
+      "pitfall":"先確認實際開發板與講義所用環境，再查接腳；相同數字不一定代表相同訊號。",
+      "questions":[{"level":1,"prompt":"RAM 與 eMMC 的用途有何不同？","answer":"RAM 用於程式執行時的資料；eMMC 是保存作業系統與檔案的非揮發儲存裝置。"},{"level":2,"prompt":"接上 SPI 感測器前，要先確認哪些平台資訊？","answer":"確認板型、接腳定義、訊號電壓與介面設定，並核對使用的編號方式。不要只憑接腳數字接線。"}]
+    }
+  ],
+  "checks":[{"prompt":"我能口述從編譯到驅動的學習路徑。","answer":"開發與編譯 → GPIO → Qt GUI → 網路遠端控制 → SPI／感測 → 核心驅動。各章練習的是不同層次的介面。"},{"prompt":"我能區分處理器、記憶體、儲存與周邊介面。","answer":"處理器運算，RAM 暫存執行資料，eMMC 保存檔案，GPIO／UART／I²C／SPI 等介面連接外部裝置。"},{"prompt":"我知道如何使用本站的級別與題目。","answer":"難度 1＝辨識、2＝應用、3＝整合；重要性 1＝補充、2＝常用、3＝核心；關聯 1＝延伸、2＝支援、3＝先備。這些級別是複習建議，題目為依教材自編。"}]
+}

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f5f7">
+  <meta name="description" content="北科大 115-1 微算機系統實習複習筆記：從 Linux 編譯、GPIO、Qt、物聯網，到 SPI 與 Linux 裝置驅動。">
+  <title>微算機・期中複習</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="content.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">跳至主要內容</a>
+  <div class="sidebar-scrim" id="sidebar-scrim"></div>
+  <aside class="sidebar" id="sidebar" aria-label="章節導覽">
+    <a class="brand" href="#home"><span class="brand-icon" aria-hidden="true">μ</span><span>微算機<span class="brand-sub">STUDY COMPANION</span></span></a>
+    <div class="sidebar-label">你的複習路徑</div>
+    <nav id="chapter-nav"></nav>
+    <div class="sidebar-bottom">
+      <div class="progress-caption"><span>複習進度</span><strong id="progress-value">0%</strong></div>
+      <div class="progress-track"><span id="progress-bar"></span></div>
+      <p id="progress-detail">從第一個觀念開始。</p>
+      <button class="text-button reset-button" id="reset-progress">重設複習紀錄</button>
+      <div class="sidebar-footnote">NTUT · 115 學年度第 1 學期</div>
+    </div>
+  </aside>
+  <div class="page-shell">
+    <header class="topbar">
+      <div class="topbar-leading"><button class="icon-button menu-toggle" id="menu-toggle" aria-label="收合側邊欄" aria-expanded="true" aria-controls="sidebar"></button><span id="breadcrumb">期中複習</span></div>
+      <div class="search-wrap">
+        <label class="search-field"><span id="search-icon" aria-hidden="true"></span><input id="search-input" type="search" placeholder="搜尋觀念、指令…" autocomplete="off" aria-label="搜尋複習內容" aria-controls="search-results" aria-expanded="false"><kbd>/</kbd></label>
+        <div class="search-results" id="search-results" hidden></div>
+      </div>
+      <a class="topbar-link" href="#sources">教材索引 <span aria-hidden="true">↗</span></a>
+    </header>
+    <main id="main" tabindex="-1"></main>
+    <footer class="site-footer"><span>微算機・期中複習</span><span>理解原理，再動手實作。</span></footer>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <noscript><p class="noscript">請啟用 JavaScript 以使用章節導覽與練習題。</p></noscript>
+</body>
+</html>

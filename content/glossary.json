@@ -1,0 +1,57 @@
+{
+  "ch0": [
+    {"term": "Embedded system", "zh": "嵌入式系統", "meaning": "以特定硬體平台執行控制與資料處理的系統。", "target": "ch0-s1"},
+    {"term": "CPU", "zh": "中央處理器", "meaning": "執行程式指令，完成系統運算與控制的處理器。", "target": "ch0-s2"},
+    {"term": "RAM", "zh": "隨機存取記憶體", "meaning": "保存執行中程式與資料的工作記憶體。", "target": "ch0-s2"},
+    {"term": "Nonvolatile storage", "zh": "非揮發性儲存", "meaning": "斷電後仍可保存系統與檔案的儲存裝置。", "target": "ch0-s2"},
+    {"term": "Interface", "zh": "介面", "meaning": "連接外部裝置，交換資料或控制訊號的介面。", "target": "ch0-s2"}
+  ],
+  "ch1": [
+    {"term": "Host", "zh": "開發端", "meaning": "執行開發工具與編譯器，產生目標程式的平台。", "target": "ch1-s3"},
+    {"term": "Target", "zh": "目標端", "meaning": "預定執行編譯產物的平台，本課主要為開發板。", "target": "ch1-s3"},
+    {"term": "Native compilation", "zh": "原生編譯", "meaning": "在與程式執行端相同的平台上完成編譯。", "target": "ch1-s3"},
+    {"term": "Cross compilation", "zh": "交叉編譯", "meaning": "在開發端編譯，產生給不同目標平台執行的程式。", "target": "ch1-s3"},
+    {"term": "make", "zh": "建置工具", "meaning": "依規則、相依關係與時間戳決定建置步驟的工具。", "target": "ch1-s4"},
+    {"term": "Dependency", "zh": "相依關係", "meaning": "建置目標所依賴的檔案關係，影響是否需要重建。", "target": "ch1-s4"}
+  ],
+  "ch2": [
+    {"term": "GPIO", "zh": "通用型輸入輸出", "meaning": "以單一位元讀取外界狀態或輸出高低電位的接腳。", "target": "ch2-s1"},
+    {"term": "Direction", "zh": "訊號方向", "meaning": "決定腳位要讀取外界輸入，或驅動外部電路。", "target": "ch2-s1"},
+    {"term": "Physical pin", "zh": "實體腳位", "meaning": "排針上的接線位置編號，與系統使用的編號不同。", "target": "ch2-s2"},
+    {"term": "Pin multiplexing", "zh": "腳位複用", "meaning": "同一實體腳位可依配置承擔不同的訊號功能。", "target": "ch2-s1"},
+    {"term": "sysfs", "zh": "核心檔案式介面", "meaning": "核心提供的檔案式介面，本課用於讀寫腳位狀態。", "target": "ch2-s3"},
+    {"term": "Export", "zh": "啟用腳位介面", "meaning": "將指定腳位的控制介面啟用，供後續讀寫。", "target": "ch2-s3"}
+  ],
+  "ch3": [
+    {"term": "Widget", "zh": "視窗元件", "meaning": "組成圖形介面的按鈕、標籤或視窗等元件。", "target": "ch3-s1"},
+    {"term": "Signal", "zh": "訊號", "meaning": "物件發出的事件通知，可連接一個或多個接收動作。", "target": "ch3-s2"},
+    {"term": "Slot", "zh": "槽", "meaning": "接到已連接的訊號後，執行指定處理動作的函式。", "target": "ch3-s2"},
+    {"term": "Event loop", "zh": "事件迴圈", "meaning": "持續處理按鈕、定時通知與畫面重繪等事件的流程。", "target": "ch3-s3"},
+    {"term": "QTimer", "zh": "計時器", "meaning": "以定時訊號觸發更新，適合逐步推進燈號狀態。", "target": "ch3-s3"},
+    {"term": "Layout", "zh": "版面管理", "meaning": "依橫排、直排或網格等規則安排介面元件。", "target": "ch3-s1"}
+  ],
+  "ch4": [
+    {"term": "IoT", "zh": "物聯網", "meaning": "將感知、網路與應用串接，讓裝置交換資訊的系統。", "target": "ch4-s1"},
+    {"term": "Edge computing", "zh": "邊緣運算", "meaning": "把運算靠近資料來源，以降低延遲與傳輸頻寬需求。", "target": "ch4-s1"},
+    {"term": "HTTP", "zh": "超文字傳輸協定", "meaning": "讓瀏覽器向伺服器送出請求並接收回應的協定。", "target": "ch4-s3"},
+    {"term": "Route", "zh": "路由", "meaning": "依請求方法與網址路徑，決定由哪個函式處理。", "target": "ch4-s3"},
+    {"term": "Child process", "zh": "子程序", "meaning": "由父程序啟動的獨立程序，本課用來執行硬體控制。", "target": "ch4-s4"},
+    {"term": "Express", "zh": "網頁服務框架", "meaning": "協助建立路由、提供靜態檔案與回應請求的框架。", "target": "ch4-s2"}
+  ],
+  "ch5": [
+    {"term": "SPI", "zh": "序列周邊介面", "meaning": "以時脈、片選與收發資料線交換位元的同步介面。", "target": "ch5-s2"},
+    {"term": "CPOL", "zh": "時脈極性", "meaning": "決定時脈在未進行資料交易時的閒置電位。", "target": "ch5-s2"},
+    {"term": "CPHA", "zh": "時脈相位", "meaning": "決定在每個位元的第一或第二個時脈邊緣取樣。", "target": "ch5-s2"},
+    {"term": "ADC", "zh": "類比數位轉換器", "meaning": "將連續電壓取樣並量化，轉成離散數位讀值的元件。", "target": "ch5-s3"},
+    {"term": "LDR", "zh": "光敏電阻", "meaning": "電阻隨光照變化的感測元件，通常光越強電阻越低。", "target": "ch5-s3"},
+    {"term": "UART", "zh": "非同步序列介面", "meaning": "不使用獨立時脈線，雙方約定鮑率與訊框格式的介面。", "target": "ch5-s1"}
+  ],
+  "ch6": [
+    {"term": "Kernel module", "zh": "核心模組", "meaning": "可載入與卸載，並在核心空間運作的程式模組。", "target": "ch6-s2"},
+    {"term": "User space", "zh": "使用者空間", "meaning": "應用程式所在的執行空間，不能任意執行特權指令。", "target": "ch6-s1"},
+    {"term": "Kernel space", "zh": "核心空間", "meaning": "核心管理程序、記憶體與裝置等資源的執行空間。", "target": "ch6-s1"},
+    {"term": "Character device", "zh": "字元裝置", "meaning": "以位元組串流觀念存取資料，並提供檔案操作的裝置。", "target": "ch6-s3"},
+    {"term": "file_operations", "zh": "檔案操作表", "meaning": "將開啟、讀寫等操作對應到驅動處理函式的結構。", "target": "ch6-s3"},
+    {"term": "Major / Minor", "zh": "主要／次要裝置編號", "meaning": "裝置節點使用的識別編號，須對應核心中的註冊。", "target": "ch6-s3"}
+  ]
+}

@@ -6,6 +6,6 @@
   "scripts": {
     "build": "node scripts/build-content.mjs",
     "start": "node scripts/serve.mjs",
-    "check": "node --check app.js && node scripts/build-content.mjs"
+    "check": "node --check app.js && node --check theme.js && node scripts/build-content.mjs"
   }
 }

@@ -16,14 +16,24 @@
   const completed = new Set((Array.isArray(saved.completed) ? saved.completed : []).filter(id => validSections.has(id)));
   const validChecks = new Set(chapters.flatMap(ch => ch.checks.map((_, i) => `${ch.id}-check-${i}`)));
   const checked = new Set((Array.isArray(saved.checked) ? saved.checked : []).filter(id => validChecks.has(id)));
+  const readingKey = 'ntut-review-last-reading';
+  const sidebarKey = 'ntut-review-sidebar';
+  const validPositions = new Set([...validSections, ...chapters.flatMap(ch => [`${ch.id}-check`, `${ch.id}-glossary`])]);
+  let lastRead = readPreference(readingKey);
+  if (!validPositions.has(lastRead)) lastRead = '';
+  const navTooltip = document.getElementById('nav-tooltip');
+  let hintedLink = null;
   let currentChapter = null;
   let toastTimer;
   let observer;
+  let navigating = false;
+  let navigationVersion = 0;
   const mobile = window.matchMedia('(max-width: 760px)');
   const escape = value => String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
   const paths = {
     menu: '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/>',
     close: '<path d="m6 6 12 12M6 18 18 6"/>',
+    link: '<path d="m10 14 4-4m-6 6-2 2a4 4 0 0 1-6-6l5-5a4 4 0 0 1 6 0m2 1 2-2a4 4 0 0 1 6 6l-5 5a4 4 0 0 1-6 0" transform="translate(1 0)"/>',
     home: '<path d="m3 11 9-8 9 8v9a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',
     search: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>',
     arrow: '<path d="M4 12h16m-6-6 6 6-6 6"/>',
@@ -43,6 +53,29 @@
   const icon = name => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] || paths.book}</svg>`;
   const chapterIcons = ['map', 'terminal', 'gpio', 'qt', 'network', 'spi', 'driver'];
   const chapterShort = ['課程導覽', 'Linux 與編譯', 'GPIO 輸入輸出', 'Qt 圖形介面', 'IoT 遠端控制', 'SPI 與感測', 'Linux 裝置驅動'];
+  function readPreference(key) {
+    try { return localStorage.getItem(key); } catch { return null; }
+  }
+  function writePreference(key, value) {
+    try { localStorage.setItem(key, value); } catch { /* Reading remains available without storage. */ }
+  }
+  function trackReading(ch, id) {
+    if (currentChapter !== ch.id || !validPositions.has(id)) return;
+    const section = ch.sections.find(s => s.id === id);
+    const label = section ? `${ch.sections.indexOf(section) + 1}. ${section.title}` : id.endsWith('-glossary') ? '中英速記' : '自我檢查';
+    const text = `${ch.number} · ${chapterShort[chapters.indexOf(ch)]} / ${label}`;
+    document.getElementById('breadcrumb').textContent = text;
+    document.getElementById('breadcrumb').title = text;
+    document.querySelectorAll('[data-section-link]').forEach(a => {
+      const active = a.dataset.sectionLink === id;
+      a.classList.toggle('current', active);
+      if (active) a.setAttribute('aria-current', 'location'); else a.removeAttribute('aria-current');
+    });
+    if (lastRead !== id) { lastRead = id; writePreference(readingKey, id); }
+    if (location.hash !== `#${id}`) {
+      try { history.replaceState(null, '', `#${id}`); } catch { /* Some local-file browsers restrict History. */ }
+    }
+  }
   function sourceUrl(file, pages = '') {
     const page = String(pages).match(/\d+/)?.[0];
     return `../${file.split('/').map(encodeURIComponent).join('/')}${page ? `#page=${page}` : ''}`;
@@ -72,10 +105,11 @@
     toastTimer = setTimeout(() => node.classList.remove('visible'), 2500);
   }
   function renderNavigation(active = 'home') {
+    hideNavHint();
     document.getElementById('chapter-nav').innerHTML = `
       <a href="#home" class="nav-link ${active === 'home' ? 'active' : ''}" ${active === 'home' ? 'aria-current="page"' : ''}><span class="nav-icon">${icon('home')}</span>複習總覽</a>
-      ${chapters.map((ch, i) => `<a class="nav-link ${active === ch.id ? 'active' : ''}" href="#${ch.id}" ${active === ch.id ? 'aria-current="page"' : ''}><span class="nav-number">${ch.number}</span>${escape(chapterShort[i] || ch.title)}</a>
-      ${active === ch.id ? `<div class="nav-sub">${ch.sections.map((s, j) => `<a href="#${s.id}" data-section-link="${s.id}">${j + 1}. ${escape(s.title)}</a>`).join('')}<a href="#${ch.id}-check" data-section-link="${ch.id}-check">章末自我檢查</a></div>` : ''}`).join('')}`;
+      ${chapters.map((ch, i) => `<a class="nav-link ${active === ch.id ? 'active' : ''}" href="#${ch.id}" data-nav-hint="${ch.id}" ${active === ch.id ? 'aria-current="page"' : ''}><span class="nav-number">${ch.number}</span>${escape(chapterShort[i] || ch.title)}</a>
+      ${active === ch.id ? `<div class="nav-sub">${ch.sections.map((s, j) => `<a href="#${s.id}" data-nav-hint="${s.id}" data-section-link="${s.id}">${j + 1}. ${escape(s.title)}</a>`).join('')}<a href="#${ch.id}-glossary" data-section-link="${ch.id}-glossary">中英速記</a><a href="#${ch.id}-check" data-section-link="${ch.id}-check">章末自我檢查</a></div>` : ''}`).join('')}`;
   }
   function heroVisual() {
     return `<div class="hero-visual" aria-hidden="true">
@@ -100,10 +134,11 @@
     currentChapter = 'home';
     renderNavigation('home');
     const next = allSections.find(s => !completed.has(s.id)) || allSections[0];
+    const resume = lastRead || next.id;
     const count = ch => ch.sections.filter(s => completed.has(s.id)).length;
     main.innerHTML = `
       <section class="home-hero">
-        <div class="hero-copy"><div class="eyebrow">115-1 · MICROPROCESSOR SYSTEMS LAB</div><h1>看懂系統，<span>串起每個實作。</span></h1><p>從第一行編譯指令，到驅動硬體的那一刻。<br>讓每個觀念，找到它的位置。</p><div class="hero-actions"><a class="primary-button" href="#${next.id}">${completed.size ? '繼續複習' : '開始複習'}${icon('arrow')}</a><a class="quiet-link" href="#ch0">先看課程地圖 ↗</a></div></div>
+        <div class="hero-copy"><div class="eyebrow">115-1 · MICROPROCESSOR SYSTEMS LAB</div><h1>看懂系統，<span>串起每個實作。</span></h1><p>從第一行編譯指令，到驅動硬體的那一刻。<br>讓每個觀念，找到它的位置。</p><div class="hero-actions"><a class="primary-button" href="#${resume}">${lastRead || completed.size ? '繼續複習' : '開始複習'}${icon('arrow')}</a><a class="quiet-link" href="#ch0">先看課程地圖 ↗</a></div></div>
         ${heroVisual()}
       </section>
       <div class="stats-strip" aria-label="教材統計"><div class="stat"><strong>${sources.length}</strong><span>份原始教材</span></div><div class="stat"><strong>${chapters.length}</strong><span>個複習主題</span></div><div class="stat"><strong>${allSections.length}</strong><span>個重點小節</span></div><div class="stat"><strong>${totalQuestions}</strong><span>題隨堂練習</span></div></div>
@@ -111,8 +146,9 @@
       <div class="chapter-grid">${chapters.map((ch, i) => i === 0 ? `
         <a class="chapter-card guide-card" href="#${ch.id}"><div class="card-top"><span class="card-symbol">${icon(chapterIcons[i])}</span></div><div><h3>00 · ${escape(ch.title)}</h3><div class="guide-description">課程地圖、開發平台與複習方式</div></div><div class="card-bottom"><span>${ch.sections.length} 小節 · 導讀</span>${icon('arrow')}</div></a>` : `
         <a class="chapter-card" href="#${ch.id}"><div class="card-top"><span class="card-number">${ch.number}</span><span class="card-symbol">${icon(chapterIcons[i])}</span></div><h3>${escape(chapterShort[i])}</h3><p>${escape(ch.summary)}</p><div class="card-bottom"><span>${ch.sections.length} 小節${count(ch) ? ` · 已複習 ${count(ch)}` : ` · ${ch.sources.length} 份教材`}</span>${icon('arrow')}</div></a>`).join('')}</div>
-      <div class="study-note">${icon('info')}<div><strong>先試著回答，再展開答案。</strong><p>每節有分級練習，章末有自我檢查；答案預設收合。標記已複習，下一次就能接著讀。<br>級別為複習建議，題目依教材自編；實際期中範圍依教師公告。</p><div class="legend"><span>難度：1 辨識 · 2 應用 · 3 整合</span><span>重要性：1 補充 · 2 常用 · 3 核心</span><span>關聯：1 延伸 · 2 支援 · 3 先備</span></div></div></div>`;
+      <div class="study-note">${icon('info')}<div><strong>先試著回答，再展開答案。</strong><p>每節有分級練習，章末有中英速記與自我檢查；答案預設收合。網站會記住上次讀到的小節。<br>級別為複習建議，題目依教材自編；實際期中範圍依教師公告。</p><div class="legend"><span>難度：1 辨識 · 2 應用 · 3 整合</span><span>重要性：1 補充 · 2 常用 · 3 核心</span></div></div></div>`;
     document.getElementById('breadcrumb').textContent = '期中複習';
+    document.getElementById('breadcrumb').removeAttribute('title');
     document.title = '微算機・期中複習';
   }
   function flow(nodes, caption) {
@@ -131,10 +167,34 @@
   function levelChip(label, value, modifier = '') {
     return `<span class="level-chip ${modifier}" title="${label} ${value} / 3"><span>${label}</span><span class="level-dots" aria-hidden="true">${[1,2,3].map(n => `<i class="${n <= value ? 'filled' : ''}"></i>`).join('')}</span><strong>${value}/3</strong></span>`;
   }
+  function hideNavHint() {
+    if (hintedLink) hintedLink.removeAttribute('aria-describedby');
+    hintedLink = null;
+    navTooltip.hidden = true;
+  }
+  function showNavHint(link) {
+    if (!link || mobile.matches || document.body.classList.contains('sidebar-collapsed')) return;
+    const id = link.dataset.navHint;
+    const chapter = chapters.find(ch => ch.id === id);
+    const section = allSections.find(s => s.id === id);
+    if (!chapter && !section) return;
+    const level = section?.level ?? Math.max(...chapter.sections.map(s => s.level));
+    const importance = section?.importance ?? Math.max(...chapter.sections.map(s => s.importance));
+    hideNavHint();
+    hintedLink = link;
+    navTooltip.innerHTML = `<div class="nav-tooltip-title">${escape(section?.title || chapter.title)}</div><div class="levels">${levelChip('難度', level)}${levelChip('重要性', importance, `important-${importance}`)}</div>${chapter ? '<p class="nav-tooltip-note">顯示本章各小節的最高級別</p>' : ''}`;
+    navTooltip.hidden = false;
+    link.setAttribute('aria-describedby', 'nav-tooltip');
+    const rect = link.getBoundingClientRect();
+    const left = Math.min(document.getElementById('sidebar').getBoundingClientRect().right + 12, window.innerWidth - navTooltip.offsetWidth - 12);
+    const top = Math.max(12, Math.min(rect.top + rect.height / 2 - navTooltip.offsetHeight / 2, window.innerHeight - navTooltip.offsetHeight - 12));
+    navTooltip.style.left = `${left}px`;
+    navTooltip.style.top = `${top}px`;
+  }
   function renderSection(s, ch, index) {
     return `<section class="lesson" id="${s.id}" aria-labelledby="${s.id}-title">
-      <div class="lesson-heading"><span class="lesson-number">${ch.number}.${index + 1}</span><h2 id="${s.id}-title">${escape(s.title)}</h2></div>
-      <div class="levels">${levelChip('難度', s.level)}${levelChip('重要性', s.importance, `important-${s.importance}`)}${levelChip(ch.id === 'ch6' ? '整合關聯' : '後續關聯', s.connectionLevel)}</div>
+      <div class="lesson-heading"><span class="lesson-number">${ch.number}.${index + 1}</span><h2 id="${s.id}-title">${escape(s.title)}</h2><button class="icon-button copy-section-link" data-copy-link="${s.id}" aria-label="複製${escape(s.title)}的小節連結" title="複製小節連結">${icon('link')}</button></div>
+      <div class="levels">${levelChip('難度', s.level)}${levelChip('重要性', s.importance, `important-${s.importance}`)}</div>
       <p class="lesson-intro">${escape(s.intro)}</p>
       <div class="key-points">${s.points.map(p => `<div class="key-point"><h3>${escape(p.term)}</h3><p>${escape(p.text)}</p></div>`).join('')}</div>
       ${s.diagram ? diagram(s.diagram) : ''}
@@ -146,13 +206,19 @@
       <div class="lesson-footer"><div class="source-refs">${s.sourceRefs.map(ref => { const src = sources.find(item => item.file === ref.file); return `<a href="${sourceUrl(ref.file, ref.pages)}" target="_blank" rel="noopener" title="${escape(ref.file)}">${escape(src?.title?.split(' · ')[0] || '原教材')} · p.${escape(ref.pages)} ↗</a>`; }).join('')}</div><button class="complete-button" data-complete="${s.id}" aria-pressed="false">${icon('circle')}標記已複習</button></div>
     </section>`;
   }
+  function renderGlossary(ch) {
+    const entries = data.glossary?.[ch.id] || [];
+    if (!entries.length) return '';
+    return `<details class="glossary" id="${ch.id}-glossary"><summary><span class="glossary-title">中英速記</span><span class="glossary-subtitle">KEY TERMS</span><span class="glossary-count">${entries.length} 個關鍵詞</span></summary><div class="glossary-grid">${entries.map(item => `<div class="glossary-item">${item.target ? `<a class="glossary-term" href="#${item.target}">${escape(item.term)} ↗</a>` : `<div class="glossary-term">${escape(item.term)}</div>`}<div class="glossary-zh">${escape(item.zh)}</div><p>${escape(item.meaning)}</p></div>`).join('')}</div></details>`;
+  }
   function renderChapter(ch) {
     currentChapter = ch.id;
     renderNavigation(ch.id);
     const index = chapters.indexOf(ch);
     main.innerHTML = `<header class="chapter-hero"><div class="eyebrow">CHAPTER ${ch.number} · ${escape(ch.subtitle)}</div><h1>${escape(ch.title)}</h1><p>${escape(ch.summary)}</p><div class="chapter-meta"><span>${ch.sections.length} 個小節 · ${ch.sections.reduce((n, s) => n + s.questions.length, 0)} 題練習</span>${ch.sources.map(src => `<a class="source-chip" href="${sourceUrl(src.file)}" target="_blank" rel="noopener" title="${escape(src.title)}">${icon('file')}${escape(src.title.split(' · ')[0])}</a>`).join('')}</div></header>
-      <nav class="chapter-jump" aria-label="本章小節">${ch.sections.map((s, i) => `<a href="#${s.id}">${i + 1}. ${escape(s.title)}</a>`).join('')}<a href="#${ch.id}-check">自我檢查</a></nav>
+      <nav class="chapter-jump" aria-label="本章小節">${ch.sections.map((s, i) => `<a href="#${s.id}">${i + 1}. ${escape(s.title)}</a>`).join('')}<a href="#${ch.id}-glossary">中英速記</a><a href="#${ch.id}-check">自我檢查</a></nav>
       ${ch.sections.map((s, i) => renderSection(s, ch, i)).join('')}
+      ${renderGlossary(ch)}
       <section class="self-check" id="${ch.id}-check" aria-labelledby="check-title"><div class="eyebrow">CHECK YOUR UNDERSTANDING</div><h2 id="check-title">這一章，你掌握了嗎？</h2><p>先用自己的話解釋，再展開參考答案。勾選代表你能獨立說明。</p>${ch.checks.map((check, i) => { const id = `${ch.id}-check-${i}`; return `<div class="check-row"><input id="${id}" type="checkbox" data-check="${id}" ${checked.has(id) ? 'checked' : ''}><label for="${id}">${escape(check.prompt)}</label><details><summary>查看參考答案</summary><div class="answer">${escape(check.answer)}</div></details></div>`; }).join('')}</section>
       <nav class="chapter-next" aria-label="前後章節">${index > 0 ? `<a href="#${chapters[index - 1].id}"><small>上一章</small>← ${escape(chapterShort[index - 1])}</a>` : '<a href="#home"><small>回到首頁</small>← 複習總覽</a>'}${index < chapters.length - 1 ? `<a class="next-link" href="#${chapters[index + 1].id}"><small>下一章</small>${escape(chapterShort[index + 1])} →</a>` : '<a class="next-link" href="#home"><small>完成一輪，回頭串起觀念</small>回到複習總覽 →</a>'}</nav>`;
     document.getElementById('breadcrumb').textContent = `${ch.number} · ${chapterShort[index]}`;
@@ -161,15 +227,10 @@
     observer?.disconnect();
     if ('IntersectionObserver' in window) {
       observer = new IntersectionObserver(entries => {
-        for (const entry of entries) if (entry.isIntersecting) {
-          document.querySelectorAll('[data-section-link]').forEach(a => {
-            const active = a.dataset.sectionLink === entry.target.id;
-            a.classList.toggle('current', active);
-            if (active) a.setAttribute('aria-current', 'location'); else a.removeAttribute('aria-current');
-          });
-        }
+        if (navigating) return;
+        for (const entry of entries) if (entry.isIntersecting) trackReading(ch, entry.target.id);
       }, { rootMargin: '-90px 0px -65% 0px', threshold: 0 });
-      document.querySelectorAll('.lesson, .self-check').forEach(node => observer.observe(node));
+      document.querySelectorAll('.lesson, .self-check, .glossary').forEach(node => observer.observe(node));
     }
   }
   function renderSources() {
@@ -178,6 +239,7 @@
     renderNavigation('sources');
     main.innerHTML = `<header class="chapter-hero"><div class="eyebrow">SOURCE LIBRARY</div><h1>每個重點，都能回查。</h1><p>14 份教材，一條清楚的複習路徑。</p></header><p class="sources-note">各節底部附 PDF 實體頁碼，點選即可回查。多段頁碼會先開啟第一段。<br>教材沿用原目錄位置；瀏覽器是否直接跳頁，取決於 PDF 閱讀器。課堂舊版介面以原環境為準。</p><div class="sources-list">${sources.map(src => { const used = chapters.filter(ch => ch.sources.some(s => s.file === src.file)); return `<div class="source-card">${icon('file')}<div><h2>${escape(src.title)}</h2><p>${src.pages} 頁 · ${used.map(ch => `<a href="#${ch.id}">第 ${ch.number} 章</a>`).join('、')}</p></div><a href="${sourceUrl(src.file)}" target="_blank" rel="noopener" aria-label="開啟${escape(src.title)}">開啟 PDF ↗</a></div>`; }).join('')}</div>`;
     document.getElementById('breadcrumb').textContent = '教材索引';
+    document.getElementById('breadcrumb').removeAttribute('title');
     document.title = '教材索引 | 微算機・期中複習';
   }
   function closeMobileSidebar() {
@@ -187,6 +249,7 @@
     if (wasOpen) document.getElementById('menu-toggle').focus();
   }
   function updateMenuState() {
+    hideNavHint();
     const expanded = mobile.matches ? document.body.classList.contains('sidebar-mobile-open') : !document.body.classList.contains('sidebar-collapsed');
     const button = document.getElementById('menu-toggle');
     button.setAttribute('aria-expanded', String(expanded));
@@ -197,18 +260,32 @@
     document.querySelector('.page-shell').inert = mobile.matches && expanded;
   }
   function route() {
+    const version = ++navigationVersion;
+    navigating = true;
     let target = 'home';
     try { target = decodeURIComponent(location.hash.slice(1)) || 'home'; } catch { /* Invalid URL fragment: return home. */ }
-    const ch = chapters.find(item => target === item.id || item.sections.some(s => s.id === target) || target === `${item.id}-check`);
+    const ch = chapters.find(item => target === item.id || item.sections.some(s => s.id === target) || target === `${item.id}-check` || target === `${item.id}-glossary`);
     if (ch) {
       if (currentChapter !== ch.id) renderChapter(ch);
       const anchor = target !== ch.id ? document.getElementById(target) : null;
-      requestAnimationFrame(() => {
+      const positionReading = () => requestAnimationFrame(() => {
+        if (version !== navigationVersion) return;
         if (anchor) anchor.scrollIntoView({ block: 'start' }); else window.scrollTo(0, 0);
+        if (anchor) trackReading(ch, target);
+        requestAnimationFrame(() => {
+          if (version !== navigationVersion) return;
+          navigating = false;
+          // Observe the settled position, rather than the chapter's initial layout.
+          observer?.disconnect();
+          document.querySelectorAll('.lesson, .self-check, .glossary').forEach(node => observer?.observe(node));
+        });
       });
+      if (document.readyState === 'complete') positionReading();
+      else window.addEventListener('load', positionReading, { once: true });
     } else {
       if (target === 'sources') renderSources(); else renderHome();
       window.scrollTo(0, 0);
+      navigating = false;
     }
     closeSearch();
     closeMobileSidebar();
@@ -225,7 +302,8 @@
     if (!query) { closeSearch(); return; }
     const terms = query.split(/\s+/);
     const results = allSections.filter(s => {
-      const text = [s.title, s.intro, ...s.points.flatMap(p => [p.term, p.text]), s.code?.text || '', ...s.questions.map(q => q.prompt)].join(' ').toLocaleLowerCase();
+      const glossaryWords = (data.glossary?.[s.chapter.id] || []).filter(item => item.target === s.id).flatMap(item => [item.term, item.zh, item.meaning]);
+      const text = [s.title, s.intro, ...s.points.flatMap(p => [p.term, p.text]), s.code?.text || '', ...s.questions.map(q => q.prompt), ...glossaryWords].join(' ').toLocaleLowerCase();
       return terms.every(term => text.includes(term));
     });
     searchResults.hidden = false;
@@ -233,6 +311,13 @@
     searchResults.innerHTML = results.length ? results.slice(0, 10).map(s => `<a class="search-result" href="#${s.id}"><strong>${escape(s.title)}</strong><span>第 ${s.chapter.number} 章 · ${escape(s.chapter.title)} · 難度 ${s.level}/3</span></a>`).join('') : '<div class="search-empty">找不到相關小節。試試 GPIO、make、SPI 或權限。</div>';
   }
   main.addEventListener('click', async event => {
+    const copyLink = event.target.closest('[data-copy-link]');
+    if (copyLink) {
+      const url = new URL(location.href);
+      url.hash = copyLink.dataset.copyLink;
+      try { await navigator.clipboard.writeText(url.href); toast('小節連結已複製。'); }
+      catch { location.hash = copyLink.dataset.copyLink; toast('已定位此小節，請複製網址列連結。'); }
+    }
     const complete = event.target.closest('[data-complete]');
     if (complete) {
       const id = complete.dataset.complete;
@@ -260,11 +345,15 @@
     if (node) { if (node.checked) checked.add(node.dataset.check); else checked.delete(node.dataset.check); saveProgress(); }
   });
   document.getElementById('reset-progress').addEventListener('click', () => {
-    if (!completed.size && !checked.size) { toast('目前沒有複習紀錄。'); return; }
-    if (window.confirm('清除所有小節與自我檢查紀錄，重新開始複習？')) {
+    if (!completed.size && !checked.size && !lastRead) { toast('目前沒有複習紀錄。'); return; }
+    if (window.confirm('清除小節、自我檢查與上次閱讀位置，重新開始複習？')) {
+      observer?.disconnect();
+      lastRead = '';
+      writePreference(readingKey, '');
       completed.clear(); checked.clear(); saveProgress();
-      document.querySelectorAll('[data-check]').forEach(input => { input.checked = false; });
-      if (currentChapter === 'home') renderHome();
+      renderHome();
+      location.hash = 'home';
+      window.scrollTo(0, 0);
       toast('複習紀錄已重設。');
     }
   });
@@ -273,6 +362,7 @@
   document.getElementById('search-icon').innerHTML = icon('search');
   document.getElementById('menu-toggle').addEventListener('click', () => {
     document.body.classList.toggle(mobile.matches ? 'sidebar-mobile-open' : 'sidebar-collapsed');
+    if (!mobile.matches) writePreference(sidebarKey, document.body.classList.contains('sidebar-collapsed') ? 'collapsed' : 'expanded');
     updateMenuState();
     if (mobile.matches && document.body.classList.contains('sidebar-mobile-open')) document.getElementById('sidebar-close').focus();
   });
@@ -280,6 +370,15 @@
   document.getElementById('sidebar-close').addEventListener('click', closeMobileSidebar);
   document.querySelector('.skip-link').addEventListener('click', event => { event.preventDefault(); main.focus(); main.scrollIntoView(); });
   document.getElementById('chapter-nav').addEventListener('click', event => { if (event.target.closest('a')) closeMobileSidebar(); });
+  document.getElementById('chapter-nav').addEventListener('pointerover', event => showNavHint(event.target.closest('[data-nav-hint]')));
+  document.getElementById('chapter-nav').addEventListener('pointerout', event => {
+    const link = event.target.closest('[data-nav-hint]');
+    if (link && !link.contains(event.relatedTarget)) hideNavHint();
+  });
+  document.getElementById('chapter-nav').addEventListener('focusin', event => showNavHint(event.target.closest('[data-nav-hint]')));
+  document.getElementById('chapter-nav').addEventListener('focusout', hideNavHint);
+  document.getElementById('sidebar').addEventListener('scroll', hideNavHint, { passive: true });
+  window.addEventListener('resize', hideNavHint);
   searchInput.addEventListener('input', search);
   searchInput.addEventListener('focus', () => { if (searchInput.value.trim()) search(); });
   searchResults.addEventListener('click', event => { if (event.target.closest('a')) closeSearch(); });
@@ -290,7 +389,7 @@
   document.addEventListener('click', event => { if (!event.target.closest('.search-wrap')) closeSearch(); });
   document.addEventListener('keydown', event => {
     if (event.key === '/' && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) && !event.metaKey && !event.ctrlKey) { event.preventDefault(); searchInput.focus(); }
-    if (event.key === 'Escape') { closeSearch(); closeMobileSidebar(); searchInput.blur(); }
+    if (event.key === 'Escape') { closeSearch(); closeMobileSidebar(); searchInput.blur(); hideNavHint(); }
     if (event.key === 'Tab' && mobile.matches && document.body.classList.contains('sidebar-mobile-open')) {
       const focusables = [...document.querySelectorAll('#sidebar a, #sidebar button')];
       const first = focusables[0], last = focusables.at(-1);
@@ -300,6 +399,11 @@
   });
   mobile.addEventListener('change', () => { document.body.classList.remove('sidebar-mobile-open'); updateMenuState(); });
   window.addEventListener('hashchange', route);
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+  if (readPreference(sidebarKey) === 'collapsed') document.body.classList.add('sidebar-collapsed');
+  if (!location.hash && lastRead) {
+    try { history.replaceState(null, '', `#${lastRead}`); } catch { /* Fall back to the overview. */ }
+  }
   route();
   updateProgress();
   updateMenuState();
